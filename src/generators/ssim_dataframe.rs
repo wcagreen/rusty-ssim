@@ -1,18 +1,30 @@
-// use polars::prelude::{Series, PolarsResult, NamedFrom};
 use polars::prelude::*;
 use crate::parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
+
 
 pub fn convert_to_dataframes(
     carriers: Vec<CarrierRecord>,
     flights: Vec<FlightLegRecord>,
     segments: Vec<SegmentRecords>,
 ) -> polars::prelude::PolarsResult<(polars::prelude::DataFrame, polars::prelude::DataFrame, polars::prelude::DataFrame)> {
+
     let carrier_series = CarrierRecord::get_columns(&carriers)?;
     let flight_series = FlightLegRecord::get_columns(&flights)?;
     let segment_series = SegmentRecords::get_columns(&segments)?;
-    let carrier_df = polars::prelude::DataFrame::new(carrier_series)?;
-    let flight_df = polars::prelude::DataFrame::new(flight_series)?;
-    let segment_df = polars::prelude::DataFrame::new(segment_series)?;
+
+
+    let mut carrier_df = polars::frame::DataFrame::default();
+    for s in carrier_series {
+        carrier_df.with_column(s)?;
+    }
+    let mut flight_df = polars::frame::DataFrame::default();
+    for s in flight_series {
+        flight_df.with_column(s)?;
+    }
+    let mut segment_df = polars::frame::DataFrame::default();
+    for s in segment_series {
+        segment_df.with_column(s)?;
+    }
     Ok((carrier_df, flight_df, segment_df))
 }
 

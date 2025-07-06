@@ -79,9 +79,6 @@ fn ssim_iterator(ssim: String) -> polars::prelude::PolarsResult<()> {
 }
 
 
-
-
-
 fn main() {
 
     let file_path = "test_files/multi_ssim.dat";
@@ -94,11 +91,3 @@ fn main() {
 
 }
 
-// use polars::prelude::*;
-
-// fn main() {
-//     let s1 = Series::new("a".into(), &["foo", "bar"]);
-//     let s2 = Series::new("b".into(), &[1, 2]);
-//     let df = DataFrame::new(vec![s1.into(), s2.into()]).unwrap();
-//     println!("{:?}", df);
-// }
