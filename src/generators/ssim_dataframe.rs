@@ -1,5 +1,5 @@
 use polars::prelude::*;
-use crate::parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
+use crate::utils::ssim_parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
 
 
 pub fn convert_to_dataframes(

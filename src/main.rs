@@ -12,14 +12,16 @@ mod generators {
 use generators::ssim_dataframe::convert_to_dataframes;
 
 mod utils {
+    pub mod ssim_exporters;
     pub mod ssim_parser_iterator;
     pub mod ssim_readers;
+    pub mod ssim_parser;
 }
 
+use utils::ssim_exporters::to_csv;
 use utils::ssim_parser_iterator::ssim_iterator;
 use utils::ssim_readers::read_all_ssim;
 
-mod parser;
 
 // use serde::Serialize;
 // use serde_json::Value;
@@ -33,11 +35,11 @@ fn main() {
 
     let (record_type_2, record_type_3s, record_type_4s) =
         ssim_iterator(ssim).expect("Failed to parse SSIM records.");
-    let (carrier_df, flight_df, segment_df) =
+    let (mut carrier_df, mut flight_df, mut segment_df) =
         convert_to_dataframes(record_type_2, record_type_3s, record_type_4s)
             .expect("Failed to build dataframes.");
 
-    println!("{:?}", carrier_df.head(Some(3)));
-    println!("{:?}", flight_df.head(Some(3)));
-    println!("{:?}", segment_df.head(Some(3)));
+    to_csv(&mut carrier_df, "carrier.csv").expect("Failed to write carrier.csv");
+    to_csv(&mut flight_df, "flight.csv").expect("Failed to write flight.csv");
+    to_csv(&mut segment_df, "segment.csv").expect("Failed to write segment.csv");
 }

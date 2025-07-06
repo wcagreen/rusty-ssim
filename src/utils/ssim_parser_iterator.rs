@@ -1,4 +1,4 @@
-use crate::parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
+use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
 
 use crate::records::carrier_record::CarrierRecord;
 use crate::records::flight_leg_records::FlightLegRecord;
