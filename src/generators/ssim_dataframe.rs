@@ -59,6 +59,7 @@ impl FlightLegRecord {
             polars::prelude::Series::new("flight_designator".into(), records.iter().map(|r| r.flight_designator.clone()).collect::<Vec<String>>()),
             polars::prelude::Series::new("operational_suffix".into(), records.iter().map(|r| r.operational_suffix.clone()).collect::<Vec<String>>()),
             polars::prelude::Series::new("airline_designator".into(), records.iter().map(|r| r.airline_designator.clone()).collect::<Vec<String>>()),
+            polars::prelude::Series::new("flight_number".into(), records.iter().map(|r| r.flight_number.clone()).collect::<Vec<String>>()),
             polars::prelude::Series::new("itinerary_variation_identifier".into(), records.iter().map(|r| r.itinerary_variation_identifier.clone()).collect::<Vec<String>>()),
             polars::prelude::Series::new("leg_sequence_number".into(), records.iter().map(|r| r.leg_sequence_number.clone()).collect::<Vec<String>>()),
             polars::prelude::Series::new("service_type".into(), records.iter().map(|r| r.service_type.clone()).collect::<Vec<String>>()),

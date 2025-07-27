@@ -13,7 +13,9 @@ mod converters {
     pub mod ssim_polars;
 }
 
-use converters::ssim_polars::ssim_to_dataframes;
+use crate::utils::ssim_exporters::{to_csv, to_parquet};
+use converters::ssim_polars::ssim_to_dataframe;
+// use converters::ssim_polars::ssim_to_dataframes;
 
 mod utils {
     pub mod ssim_exporters;
@@ -31,27 +33,16 @@ mod utils {
 // TODO - implement a Python interface for this Rust code
 // TODO - implement a way to convert segments to json and join them to flight legs based on the flight leg identifier
 
-
-
 fn main() {
     let file_path = "test_files/multi_ssim.dat";
-    let (carrier_df, flight_df, segment_df) =
-        ssim_to_dataframes(file_path).expect("Failed to read SSIM records.");
 
-    println!("{:?}", carrier_df);
-    println!("{:?}", flight_df);
-    println!("{:?}", segment_df);
+    // let (mut carrier_df, mut flight_df, mut segment_df) =
+    //     ssim_to_dataframes(file_path).expect("Failed to read SSIM records.");
 
-    //
-    // let test = build_segments(&segment_df);
-    //
-    // println!("{:?}", test);
+    let mut ssim_dataframe = ssim_to_dataframe(file_path).expect("Failed to read SSIM records.");
 
-    // to_csv(&mut carrier_df, "carrier.csv").expect("Failed to write carrier.csv");
-    // to_csv(&mut flight_df, "flight.csv").expect("Failed to write flight.csv");
-    // to_csv(&mut result, "segment.csv").expect("Failed to write segment.csv");
+    to_csv(&mut ssim_dataframe, "ssim.csv").expect("Failed to write ssim.csv");
 
-    // to_parquet(&mut carrier_df, "carrier.parquet", "snappy").expect("Failed to write carrier.csv");
-    // to_parquet(&mut flight_df, "flight.parquet", "snappy").expect("Failed to write flight.csv");
-    // to_parquet(&mut segment_df, "segment.parquet", "snappy").expect("Failed to write segment.csv");
+    to_parquet(&mut ssim_dataframe, "ssim.parquet", "snappy")
+        .expect("Failed to write ssim.parquet");
 }
