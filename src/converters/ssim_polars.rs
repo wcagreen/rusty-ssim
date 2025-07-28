@@ -1,11 +1,40 @@
 use crate::{generators, utils};
-use polars::prelude::{col, IntoLazy, JoinArgs, JoinType};
 use polars::prelude::DataFrame;
+use polars::prelude::{col, IntoLazy, JoinArgs, JoinType};
 
 use generators::ssim_dataframe::convert_to_dataframes;
 use utils::ssim_parser_iterator::ssim_iterator;
 use utils::ssim_readers::read_all_ssim;
 
+/// Takes Flights and Carriers and combines them under one dataframe based on Airline Designator.
+
+///
+/// # Arguments
+/// * `flights` - Flight Polars Dataframe.
+/// * `carrier` - carrier Polars Dataframes.
+/// # Errors
+/// Returns a Polars Dataframe and if merge fails, then it errors out.
+fn combine_carrier_and_flights(
+    carrier: DataFrame,
+    flights: DataFrame,
+) -> polars::prelude::PolarsResult<DataFrame> {
+    let combined_records = flights
+        .clone()
+        .lazy()
+        .drop([col("record_type"), col("record_serial_number")])
+        .join(
+            carrier
+                .clone()
+                .lazy()
+                .drop([col("record_type"), col("record_serial_number")]),
+            [col("airline_designator")],
+            [col("airline_designator")],
+            JoinArgs::new(JoinType::Left),
+        )
+        .collect()?;
+
+    Ok(combined_records)
+}
 
 /// Takes Flights and Segments and combines them under one dataframe based on Flight Designator.
 /// Flight Designator is a string of "airline_designator", "flight_number", "operational_suffix", "itinerary_variation_identifier" ,"leg_sequence_number", "service_type", "itinerary_variation_identifier_overflow" combine.
@@ -19,10 +48,9 @@ fn combine_flights_and_segments(
     flights: DataFrame,
     segments: DataFrame,
 ) -> polars::prelude::PolarsResult<DataFrame> {
-    let combine_records = flights
+    let combined_records = flights
         .clone()
         .lazy()
-        .drop([col("record_type"), col("record_serial_number")])
         .join(
             segments.clone().lazy().select([
                 col("flight_designator"),
@@ -39,7 +67,7 @@ fn combine_flights_and_segments(
         )
         .collect()?;
 
-    Ok(combine_records)
+    Ok(combined_records)
 }
 
 /// Takes Flights and Segments and combines them under one dataframe based on Flight Designator.
@@ -60,7 +88,10 @@ pub fn ssim_to_dataframe(file_path: &str) -> polars::prelude::PolarsResult<DataF
             .expect("Failed to build dataframes.");
 
 
-    let ssim_dataframe = combine_flights_and_segments(flight_df, segment_df);
+    let mut ssim_dataframe = combine_carrier_and_flights(carrier_df, flight_df);
+
+    // TODO Need to rework how merge works because control duplicate indicator. This is only an issue with multi carrier files that codes like XX and XX*.
+    ssim_dataframe = combine_flights_and_segments(ssim_dataframe?, segment_df);
 
     Ok(ssim_dataframe?)
 }

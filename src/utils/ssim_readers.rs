@@ -1,5 +1,8 @@
 use std::fs::read_to_string;
 
+// TODO Add another read option to handle large ssim files.
+
+
 /// Reads a whole ssim file into memory.
 ///
 /// # Arguments
