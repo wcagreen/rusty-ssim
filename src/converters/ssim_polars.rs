@@ -1,6 +1,6 @@
 use crate::{generators, utils};
 use polars::prelude::{col, IntoLazy, JoinArgs, JoinType};
-use polars_core::prelude::DataFrame;
+use polars::prelude::DataFrame;
 
 use generators::ssim_dataframe::convert_to_dataframes;
 use utils::ssim_parser_iterator::ssim_iterator;
