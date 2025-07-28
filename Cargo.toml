@@ -1,10 +1,18 @@
-[package]
-name = "rusty-ssim"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [ "rusty-ssim-core", "cli-rusty-ssim", "py-rusty-ssim" ]
+resolver = "3"
 
-[dependencies]
-clap = { version = "4.5.41", features = ["derive"] }
-polars = { version = "0.49.1", features = ["lazy", "parquet", "dtype-struct"] }
+[workspace.package]
+version = "0.2.0"
+authors = ["wcagreen"]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/wcagreen/rusty-ssim"
+
+
+[workspace.dependencies]
+polars = { version = "0.49.1", features = ["lazy", "parquet", "dtype-struct", "ipc"] }
 serde = "1.0.218"
-
+rusty-ssim-core = { version = "0.1.0", path="./rusty-ssim-core"}
+cli-rusty-ssim = { version = "0.1.0", path="./cli-rusty-ssim"}
+py-rusty-ssim = { version = "0.1.0", path="./py-rusty-ssim"}
