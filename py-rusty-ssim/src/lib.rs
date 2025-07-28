@@ -3,6 +3,13 @@ use pyo3::prelude::*;
 
 pub use rusty_ssim_core::ssim_to_dataframe;
 
+
+/// Parses an SSIM file and converts it to a Polars DataFrame.
+///
+/// # Arguments
+/// * `file_path` - File path to the SSIM file.
+/// # Errors
+/// Returns a Polars Dataframe, if fails it errors out.
 #[pyfunction]
 fn parse_ssim_to_dataframe(py: Python<'_>, file_path: &str) -> PyResult<PyObject> {
     let mut ssim_dataframe = ssim_to_dataframe(file_path)
