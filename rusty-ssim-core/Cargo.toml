@@ -1,0 +1,16 @@
+[package]
+name = "rusty-ssim-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core Library that serves as the backbone for SSIM parser."
+
+[dependencies]
+polars.workspace = true
+serde.workspace = true
+
+[lib]
+name = "rusty_ssim_core"
+crate-type = ["rlib"]

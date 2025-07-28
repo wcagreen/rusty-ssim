@@ -1,0 +1,12 @@
+[package]
+name = "cli-rusty-ssim"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SSIM Parser CLI tool."
+
+[dependencies]
+clap = { version = "4.5.41", features = ["derive"] }
+rusty-ssim-core.workspace = true
