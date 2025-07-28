@@ -13,6 +13,6 @@ repository = "https://github.com/wcagreen/rusty-ssim"
 [workspace.dependencies]
 polars = { version = "0.49.1", features = ["lazy", "parquet", "dtype-struct", "ipc"] }
 serde = "1.0.218"
-rusty-ssim-core = { version = "0.1.0", path="./rusty-ssim-core"}
-cli-rusty-ssim = { version = "0.1.0", path="./cli-rusty-ssim"}
-py-rusty-ssim = { version = "0.1.0", path="./py-rusty-ssim"}
+rusty-ssim-core = { version = "0.2.0", path="./rusty-ssim-core"}
+cli-rusty-ssim = { version = "0.2.0", path="./cli-rusty-ssim"}
+py-rusty-ssim = { version = "0.2.0", path="./py-rusty-ssim"}
