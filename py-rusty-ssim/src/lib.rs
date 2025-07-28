@@ -1,19 +1,25 @@
-use pyo3::prelude::*;
 use polars::prelude::*;
-use polars::io::ipc::IpcWriter;
-use pyo3::types::PyBytes;
+use pyo3::prelude::*;
 
-pub use rusty_ssim_core::{ssim_to_dataframe};
+pub use rusty_ssim_core::ssim_to_dataframe;
 
 #[pyfunction]
-fn parse_ssim_to_dataframe(py: Python<'_>, file_path: &str) -> PyResult<Py<PyBytes>>  {
-    let mut ssim_dataframe = ssim_to_dataframe(file_path).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+fn parse_ssim_to_dataframe(py: Python<'_>, file_path: &str) -> PyResult<PyObject> {
+    let mut ssim_dataframe = ssim_to_dataframe(file_path)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
     let mut buffer = Vec::new();
     IpcWriter::new(&mut buffer)
         .finish(&mut ssim_dataframe)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
-    Ok(PyBytes::new(py, &buffer).into())
+    let polars = py.import("polars")?;
+    let io = py.import("io")?;
+    let bytes_io = io.getattr("BytesIO")?.call1((buffer,))?;
+
+    let df = polars.getattr("read_ipc")?.call1((bytes_io,))?;
+
+    Ok(df.into())
 }
 
 #[pymodule]
