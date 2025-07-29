@@ -15,6 +15,7 @@ mod converters {
 
 pub use crate::utils::ssim_exporters::{to_csv, to_parquet};
 pub use converters::ssim_polars::ssim_to_dataframe;
+pub use converters::ssim_polars::ssim_to_dataframes;
 
 mod utils {
     pub mod ssim_exporters;
