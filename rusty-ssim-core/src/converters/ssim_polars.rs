@@ -1,3 +1,4 @@
+use polars::error::PolarsResult;
 use crate::{generators, utils};
 use polars::prelude::DataFrame;
 use polars::prelude::{col, IntoLazy, JoinArgs, JoinType};
@@ -17,7 +18,7 @@ use utils::ssim_readers::read_all_ssim;
 fn combine_carrier_and_flights(
     carrier: DataFrame,
     flights: DataFrame,
-) -> polars::prelude::PolarsResult<DataFrame> {
+) -> PolarsResult<DataFrame> {
     let combined_records = flights
         .clone()
         .lazy()
@@ -47,7 +48,7 @@ fn combine_carrier_and_flights(
 fn combine_flights_and_segments(
     flights: DataFrame,
     segments: DataFrame,
-) -> polars::prelude::PolarsResult<DataFrame> {
+) -> PolarsResult<DataFrame> {
     let combined_records = flights
         .clone()
         .lazy()
@@ -77,7 +78,7 @@ fn combine_flights_and_segments(
 /// * `file_path` - SSIM File Path.
 /// # Errors
 /// Returns a Polars Dataframe others it errors out.
-pub fn ssim_to_dataframe(file_path: &str) -> polars::prelude::PolarsResult<DataFrame> {
+pub fn ssim_to_dataframe(file_path: &str) -> PolarsResult<DataFrame> {
     let ssim = read_all_ssim(&file_path);
 
     let (record_type_2, record_type_3s, record_type_4s) =
@@ -95,3 +96,23 @@ pub fn ssim_to_dataframe(file_path: &str) -> polars::prelude::PolarsResult<DataF
 
     Ok(ssim_dataframe?)
 }
+
+
+/// Reads in SSIM file and parses it out as three dataframes. One dataframe for each of the following records types (2, 3, 4).
+/// # Arguments
+/// * `file_path` - SSIM File Path.
+/// # Errors
+/// Returns three Polars Dataframe others it errors out.
+pub fn ssim_to_dataframes(file_path: &str) ->  PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+    let ssim = read_all_ssim(&file_path);
+
+    let (record_type_2, record_type_3s, record_type_4s) =
+        ssim_iterator(ssim).expect("Failed to parse SSIM records.");
+
+    let (carrier_df, flight_df, segment_df) =
+        convert_to_dataframes(record_type_2, record_type_3s, record_type_4s)
+            .expect("Failed to build dataframes.");
+
+    Ok((carrier_df, flight_df, segment_df))
+}
+
