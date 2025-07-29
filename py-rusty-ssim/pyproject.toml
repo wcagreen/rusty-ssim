@@ -19,3 +19,6 @@ dynamic = ["version"]
 
 [project.urls]
 Repository = "https://github.com/wcagreen/rusty-ssim"
+
+[tool.maturin]
+include = ["rusty_ssim/*.pyi", "rusty_ssim/py.typed"]
