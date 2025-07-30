@@ -15,9 +15,8 @@ pub use rusty_ssim_core::ssim_to_dataframes;
 /// * `file_path` - File path to the SSIM file.
 /// # Errors
 /// Returns three Polar Dataframes if it fails it errors out.
-fn split_ssim_to_dataframes(py: Python<'_>, file_path: &str) -> PyResult<Py<PyAny>>  {
-    let (carrier_df, flights_df, segments_df) = ssim_to_dataframes(file_path)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+fn split_ssim_to_dataframes(py: Python<'_>, file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) -> PyResult<Py<PyAny>>  {
+    let (carrier_df, flights_df, segments_df) = ssim_to_dataframes(file_path, streaming, batch_size).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let polars = py.import("polars")?;
     let io = py.import("io")?;
@@ -50,8 +49,8 @@ fn split_ssim_to_dataframes(py: Python<'_>, file_path: &str) -> PyResult<Py<PyAn
 /// * `file_path` - File path to the SSIM file.
 /// # Errors
 /// Returns a Polar Dataframe if it fails it errors out.
-fn parse_ssim_to_dataframe(py: Python<'_>, file_path: &str) -> PyResult<PyObject> {
-    let mut ssim_dataframe = ssim_to_dataframe(file_path)
+fn parse_ssim_to_dataframe(py: Python<'_>, file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) -> PyResult<PyObject> {
+    let mut ssim_dataframe = ssim_to_dataframe(file_path, streaming, batch_size)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let mut buffer = Vec::new();

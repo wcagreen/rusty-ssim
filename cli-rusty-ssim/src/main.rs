@@ -35,6 +35,15 @@ struct SsimDfOptions {
     /// Parquet Compression Options options are  "snappy", "gzip", "lz4", "zstd", or "uncompressed"
     #[arg(short, long, default_value = "snappy", required = true)]
     compression: String,
+
+    /// Streaming indicator.
+    #[arg(short, long, default_value = "false")]
+    streaming: bool,
+
+    /// Batch size for streaming.
+    #[arg(short, long, default_value = "10000")]
+    batch_size: usize,
+
 }
 
 #[derive(Args)]
@@ -55,7 +64,7 @@ fn main() {
     match &cli.command {
         Commands::Df(options) => {
             let mut ssim_dataframe =
-                ssim_to_dataframe(&options.ssim_path).expect("Failed to read SSIM records.");
+                ssim_to_dataframe(&options.ssim_path, Option::from(options.streaming), Option::from(options.batch_size)).expect("Failed to read SSIM records.");
             if options.file_type == "csv" {
                 to_csv(&mut ssim_dataframe, &options.output_path)
                     .expect("Unable to write out csv file.");
