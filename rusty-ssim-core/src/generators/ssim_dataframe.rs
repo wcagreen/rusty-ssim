@@ -28,7 +28,24 @@ pub fn convert_to_dataframes(
             "record_serial_number" => carriers.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
         }?
     } else {
-        DataFrame::empty()
+        df! {
+            "airline_designator" => Vec::<&str>::new(),
+            "control_duplicate_indicator" => Vec::<&str>::new(),
+            "time_mode" => Vec::<&str>::new(),
+            "season" => Vec::<&str>::new(),
+            "period_of_schedule_validity_from" => Vec::<&str>::new(),
+            "period_of_schedule_validity_to" => Vec::<&str>::new(),
+            "creation_date" => Vec::<&str>::new(),
+            "title_of_data" => Vec::<&str>::new(),
+            "release_date" => Vec::<&str>::new(),
+            "schedule_status" => Vec::<&str>::new(),
+            "general_information" => Vec::<&str>::new(),
+            "in_flight_service_information" => Vec::<&str>::new(),
+            "electronic_ticketing_information" => Vec::<&str>::new(),
+            "creation_time" => Vec::<&str>::new(),
+            "record_type" => Vec::<String>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
     };
 
         let flight_df = if !flights.is_empty() {
@@ -81,7 +98,54 @@ pub fn convert_to_dataframes(
             "record_serial_number" => flights.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
         }?
     } else {
-        DataFrame::empty()
+        df! {
+            "flight_designator" => Vec::<&str>::new(),
+            "operational_suffix" => Vec::<&str>::new(),
+            "airline_designator" => Vec::<&str>::new(),
+            "flight_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier" => Vec::<&str>::new(),
+            "leg_sequence_number" => Vec::<&str>::new(),
+            "service_type" => Vec::<&str>::new(),
+            "period_of_operation_from" =>Vec::<&str>::new(),
+            "period_of_operation_to" => Vec::<&str>::new(),
+            "days_of_operation" => Vec::<&str>::new(),
+            "frequency_rate" => Vec::<&str>::new(),
+            "departure_station" => Vec::<&str>::new(),
+            "scheduled_time_of_passenger_departure" => Vec::<&str>::new(),
+            "scheduled_time_of_aircraft_departure" => Vec::<&str>::new(),
+            "time_variation_departure" => Vec::<&str>::new(),
+            "passenger_terminal_departure" => Vec::<&str>::new(),
+            "arrival_station" => Vec::<&str>::new(),
+            "scheduled_time_of_aircraft_arrival" => Vec::<&str>::new(),
+            "scheduled_time_of_passenger_arrival" => Vec::<&str>::new(),
+            "time_variation_arrival" => Vec::<&str>::new(),
+            "passenger_terminal_arrival" => Vec::<&str>::new(),
+            "aircraft_type" => Vec::<&str>::new(),
+            "passenger_reservations_booking_designator" => Vec::<&str>::new(),
+            "passenger_reservations_booking_modifier" => Vec::<&str>::new(),
+            "meal_service_note" => Vec::<&str>::new(),
+            "joint_operation_airline_designators" => Vec::<&str>::new(),
+            "min_connecting_time_status_departure"=> Vec::<&str>::new(),
+            "min_connecting_time_status_arrival"=> Vec::<&str>::new(),
+            "secure_flight_indicator" => Vec::<&str>::new(),
+            "itinerary_variation_identifier_overflow" => Vec::<&str>::new(),
+            "aircraft_owner" => Vec::<&str>::new(),
+            "cockpit_crew_employer" => Vec::<&str>::new(),
+            "cabin_crew_employer" => Vec::<&str>::new(),
+            "onward_flight" => Vec::<&str>::new(),
+            "airline_designator2" => Vec::<&str>::new(),
+            "flight_number2" => Vec::<&str>::new(),
+            "aircraft_rotation_layover" => Vec::<&str>::new(),
+            "operational_suffix2" => Vec::<&str>::new(),
+            "flight_transit_layover" => Vec::<&str>::new(),
+            "operating_airline_disclosure" => Vec::<&str>::new(),
+            "traffic_restriction_code" => Vec::<&str>::new(),
+            "traffic_restriction_code_leg_overflow_indicator" => Vec::<&str>::new(),
+            "aircraft_configuration" => Vec::<&str>::new(),
+            "date_variation" => Vec::<&str>::new(),
+            "record_type" => Vec::<&str>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
     };
 
     let segment_df = if !segments.is_empty() {
@@ -103,7 +167,23 @@ pub fn convert_to_dataframes(
             "record_serial_number" => segments.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
         }?
     } else {
-        DataFrame::empty()
+        df! {
+            "flight_designator" => Vec::<&str>::new(),
+            "operational_suffix" => Vec::<&str>::new(),
+            "airline_designator" => Vec::<&str>::new(),
+            "flight_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier" => Vec::<&str>::new(),
+            "leg_sequence_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier_overflow" => Vec::<&str>::new(),
+            "board_point_indicator" => Vec::<&str>::new(),
+            "off_point_indicator" => Vec::<&str>::new(),
+            "data_element_identifier" => Vec::<&str>::new(),
+            "board_point" => Vec::<&str>::new(),
+            "off_point" => Vec::<&str>::new(),
+            "data" => Vec::<&str>::new(),
+            "record_type" => Vec::<String>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
     };
 
         Ok((carrier_df, flight_df, segment_df))

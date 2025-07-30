@@ -109,7 +109,7 @@ pub fn ssim_to_dataframe_streaming(file_path: &str, batch_size: Option<usize>) -
 /// Returns a Polars Dataframe others it errors out.
 pub fn ssim_to_dataframe(file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
 
-    if Some(streaming).is_some() {
+    if streaming.unwrap_or(false) {
         Ok(ssim_to_dataframe_streaming(file_path, batch_size)?)
     } else {
         Ok(ssim_to_dataframe_memory(file_path)?)
@@ -137,7 +137,7 @@ pub fn ssim_to_dataframes_memory(file_path: &str) ->PolarsResult<(DataFrame, Dat
 /// Returns three Polars Dataframe others it errors out.
 pub fn ssim_to_dataframes(file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) ->  PolarsResult<(DataFrame, DataFrame, DataFrame)> {
 
-    if Some(streaming).is_some() {
+    if streaming.unwrap_or(false) {
         Ok(ssim_to_dataframes_streaming(file_path, batch_size)?)
     } else {
         Ok(ssim_to_dataframes_memory(file_path)?)
