@@ -8,29 +8,6 @@ use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flight
 
 const DEFAULT_BATCH_SIZE: usize = 10_000;
 
-/// Output destination for streaming SSIM processing
-pub enum StreamOutput {
-    /// Return separate DataFrames in memory (carriers, flights, segments)
-    SeparateDataFrames,
-    /// Return single combined DataFrame in memory
-    CombinedDataFrame,
-    /// Write directly to file
-    File {
-        path: String,
-        file_type: String,
-        compression: Option<String>,
-    },
-}
-
-/// Result type for different processing modes
-pub enum ProcessResult {
-    /// Three separate DataFrames (carriers, flights, segments)
-    SeparateDataFrames((DataFrame, DataFrame, DataFrame)),
-    /// Single combined DataFrame
-    CombinedDataFrame(DataFrame),
-    /// File was written successfully
-    WrittenToFile,
-}
 
 /// Unified streaming SSIM reader that can output to memory or file
 pub struct StreamingSsimReader {
@@ -171,24 +148,7 @@ impl StreamingSsimReader {
         // For other record types, stop at batch size
         Ok(false)
     }
-
-    /// Process SSIM file with the specified output destination
-    pub fn process(&mut self, output: StreamOutput) -> PolarsResult<ProcessResult> {
-        match output {
-            StreamOutput::SeparateDataFrames => {
-                let result = self.process_to_dataframes()?;
-                Ok(ProcessResult::SeparateDataFrames(result))
-            }
-            StreamOutput::CombinedDataFrame => {
-                let result = self.process_to_combined_dataframe()?;
-                Ok(ProcessResult::CombinedDataFrame(result))
-            }
-            StreamOutput::File { path, file_type, compression } => {
-                self.stream_to_file(&path, &file_type, compression.as_deref())?;
-                Ok(ProcessResult::WrittenToFile)
-            }
-        }
-    }
+    
 
     /// Process SSIM file and return a single combined DataFrame in memory
     pub fn process_to_combined_dataframe(&mut self) -> PolarsResult<DataFrame> {
@@ -537,16 +497,4 @@ pub fn stream_ssim_to_file(
         .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
 
     reader.stream_to_file(output_path, file_type, compression)
-}
-
-/// Flexible streaming function that can output to memory or file
-pub fn stream_ssim_with_output(
-    file_path: &str,
-    output: StreamOutput,
-    batch_size: Option<usize>,
-) -> PolarsResult<ProcessResult> {
-    let mut reader = StreamingSsimReader::new(file_path, batch_size)
-        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
-
-    reader.process(output)
 }
