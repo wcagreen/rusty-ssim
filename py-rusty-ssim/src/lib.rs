@@ -5,6 +5,7 @@ use pyo3::types::PyTuple;
 pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, stream_ssim_to_file};
 
 #[pyfunction]
+#[pyo3(signature = (file_path, output_path, file_type, compression=None, batch_size=10000))]
 fn parse_ssim_to_file(
     _py: Python<'_>,
     file_path: &str,
@@ -28,6 +29,7 @@ fn parse_ssim_to_file(
 }
 
 #[pyfunction]
+#[pyo3(signature = (file_path, batch_size=10000))]
 fn split_ssim_to_dataframes(
     py: Python<'_>,
     file_path: &str,
@@ -61,6 +63,7 @@ fn split_ssim_to_dataframes(
 }
 
 #[pyfunction]
+#[pyo3(signature = (file_path, batch_size=10000))]
 fn parse_ssim_to_dataframe(
     py: Python<'_>,
     file_path: &str,
