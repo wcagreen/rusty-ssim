@@ -31,11 +31,10 @@ fn parse_ssim_to_file(
 fn split_ssim_to_dataframes(
     py: Python<'_>,
     file_path: &str,
-    streaming: Option<bool>,
     batch_size: Option<usize>,
 ) -> PyResult<Py<PyAny>> {
     let (carrier_df, flights_df, segments_df) =
-        ssim_to_dataframes(file_path, streaming, batch_size)
+        ssim_to_dataframes(file_path, batch_size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let polars = py.import("polars")?;
@@ -65,10 +64,9 @@ fn split_ssim_to_dataframes(
 fn parse_ssim_to_dataframe(
     py: Python<'_>,
     file_path: &str,
-    streaming: Option<bool>,
     batch_size: Option<usize>,
 ) -> PyResult<PyObject> {
-    let mut ssim_dataframe = ssim_to_dataframe(file_path, streaming, batch_size)
+    let mut ssim_dataframe = ssim_to_dataframe(file_path, batch_size)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let mut buffer = Vec::new();
