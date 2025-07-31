@@ -11,14 +11,22 @@ use generators::ssim_dataframe::convert_to_dataframes;
 use utils::ssim_parser_iterator::ssim_iterator;
 use utils::ssim_readers::read_all_ssim;
 
-/// Takes Flights and Carriers and combines them under one dataframe based on Airline Designator.
 
+
+/// Combines Flights and Carriers into a single DataFrame based on `airline_designator`.
+///
+/// This function performs a left join of the `flights` and `carrier` DataFrames on the `airline_designator` column.
+/// Unnecessary columns such as `record_type` and `record_serial_number` are dropped before merging.
 ///
 /// # Arguments
-/// * `flights` - Flight Polars Dataframe.
-/// * `carrier` - carrier Polars Dataframes.
+/// * `carrier` - A Polars DataFrame containing carrier records.
+/// * `flights` - A Polars DataFrame containing flight records.
+///
+/// # Returns
+/// * `PolarsResult<DataFrame>` - A combined DataFrame with carrier details joined to flight records.
+///
 /// # Errors
-/// Returns a Polars Dataframe and if merge fails, then it errors out.
+/// Returns an error if the join operation fails.
 pub(crate) fn combine_carrier_and_flights(
     carrier: DataFrame,
     flights: DataFrame,
@@ -41,14 +49,22 @@ pub(crate) fn combine_carrier_and_flights(
     Ok(combined_records)
 }
 
-/// Takes Flights and Segments and combines them under one dataframe based on Flight Designator.
-/// Flight Designator is a string of "airline_designator", "flight_number", "operational_suffix", "itinerary_variation_identifier" ,"leg_sequence_number", "service_type", "itinerary_variation_identifier_overflow" combine.
+/// Combines Flights and Segments into a single DataFrame based on `flight_designator`.
+///
+/// The `flight_designator` is a concatenation of:
+/// `airline_designator`, `flight_number`, `operational_suffix`,
+/// `itinerary_variation_identifier`, `leg_sequence_number`,
+/// `service_type`, and `itinerary_variation_identifier_overflow`.
 ///
 /// # Arguments
-/// * `flights` - Flight Polars Dataframe.
-/// * `segments` - Segment Polars Dataframes.
+/// * `flights` - A Polars DataFrame containing flight records.
+/// * `segments` - A Polars DataFrame containing segment records.
+///
+/// # Returns
+/// * `PolarsResult<DataFrame>` - A combined DataFrame with segment details joined to flight records.
+///
 /// # Errors
-/// Returns a Polars Dataframe and if merge fails, then it errors out.
+/// Returns an error if the join operation fails.
 pub(crate) fn combine_flights_and_segments(
     flights: DataFrame,
     segments: DataFrame,
@@ -75,6 +91,19 @@ pub(crate) fn combine_flights_and_segments(
     Ok(combined_records)
 }
 
+/// Parses an SSIM file into a single DataFrame in memory.
+///
+/// Reads all SSIM records into memory, converts record types 2 (Carriers), 3 (Flights),
+/// and 4 (Segments) into DataFrames, and then merges them into a single DataFrame.
+///
+/// # Arguments
+/// * `file_path` - Path to the SSIM file.
+///
+/// # Returns
+/// * `PolarsResult<DataFrame>` - A combined SSIM DataFrame.
+///
+/// # Errors
+/// Returns an error if file reading, parsing, or merging fails.
 pub fn ssim_to_dataframe_memory(file_path: &str) -> PolarsResult<DataFrame> {
     let ssim = read_all_ssim(&file_path);
 
@@ -92,6 +121,22 @@ pub fn ssim_to_dataframe_memory(file_path: &str) -> PolarsResult<DataFrame> {
     Ok(ssim_dataframe?)
 }
 
+
+/// Parses an SSIM file into a single DataFrame using streaming (optimized for large files).
+///
+/// This function processes the SSIM file in batches, converting record types 2 (Carriers),
+/// 3 (Flights), and 4 (Segments) into DataFrames. It then merges them into a single combined DataFrame.
+/// Streaming mode reduces memory usage by loading and processing only a portion of the file at a time.
+///
+/// # Arguments
+/// * `file_path` - Path to the SSIM file.
+/// * `batch_size` - Optional batch size for streaming. If `None`, a default batch size is used.
+///
+/// # Returns
+/// * `PolarsResult<DataFrame>` - A combined SSIM DataFrame containing carriers, flights, and segments.
+///
+/// # Errors
+/// Returns an error if file reading, parsing, or merging fails.
 pub fn ssim_to_dataframe_streaming(file_path: &str, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
     let (carrier_df, flight_df, segment_df) = ssim_to_dataframes_streaming(file_path, batch_size)?;
     let mut ssim_dataframe = combine_carrier_and_flights(carrier_df, flight_df)?;
@@ -100,13 +145,20 @@ pub fn ssim_to_dataframe_streaming(file_path: &str, batch_size: Option<usize>) -
 }
 
 
-/// Takes Flights and Segments and combines them under one dataframe based on Flight Designator.
-/// Flight Designator is a string of "airline_designator", "flight_number", "operational_suffix", "itinerary_variation_identifier" ,"leg_sequence_number", "service_type", "itinerary_variation_identifier_overflow" combine.
+/// Parses an SSIM file into a single DataFrame.
+///
+/// Automatically chooses between in-memory or streaming mode based on the `streaming` flag.
 ///
 /// # Arguments
-/// * `file_path` - SSIM File Path.
+/// * `file_path` - Path to the SSIM file.
+/// * `streaming` - Optional flag to enable streaming mode (for large files).
+/// * `batch_size` - Optional batch size for streaming mode.
+///
+/// # Returns
+/// * `PolarsResult<DataFrame>` - A combined SSIM DataFrame.
+///
 /// # Errors
-/// Returns a Polars Dataframe others it errors out.
+/// Returns an error if parsing or merging fails.
 pub fn ssim_to_dataframe(file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
 
     if streaming.unwrap_or(false) {
@@ -117,6 +169,20 @@ pub fn ssim_to_dataframe(file_path: &str, streaming: Option<bool>, batch_size: O
 
 }
 
+
+/// Parses an SSIM file into three DataFrames (Carriers, Flights, Segments) in memory.
+///
+/// Reads all SSIM records into memory and separates record types 2, 3, and 4
+/// into individual DataFrames.
+///
+/// # Arguments
+/// * `file_path` - Path to the SSIM file.
+///
+/// # Returns
+/// * `PolarsResult<(DataFrame, DataFrame, DataFrame)>` - A tuple containing (Carriers, Flights, Segments) DataFrames.
+///
+/// # Errors
+/// Returns an error if file reading or parsing fails.
 pub fn ssim_to_dataframes_memory(file_path: &str) ->PolarsResult<(DataFrame, DataFrame, DataFrame)> {
     let ssim = read_all_ssim(&file_path);
 
@@ -130,11 +196,20 @@ pub fn ssim_to_dataframes_memory(file_path: &str) ->PolarsResult<(DataFrame, Dat
 }
 
 
-/// Reads in SSIM file and parses it out as three dataframes. One dataframe for each of the following records types (2, 3, 4).
+/// Parses an SSIM file into three DataFrames (Carriers, Flights, Segments).
+///
+/// Automatically chooses between in-memory or streaming mode based on the `streaming` flag.
+///
 /// # Arguments
-/// * `file_path` - SSIM File Path.
+/// * `file_path` - Path to the SSIM file.
+/// * `streaming` - Optional flag to enable streaming mode (for large files).
+/// * `batch_size` - Optional batch size for streaming mode.
+///
+/// # Returns
+/// * `PolarsResult<(DataFrame, DataFrame, DataFrame)>` - A tuple containing (Carriers, Flights, Segments) DataFrames.
+///
 /// # Errors
-/// Returns three Polars Dataframe others it errors out.
+/// Returns an error if parsing fails.
 pub fn ssim_to_dataframes(file_path: &str, streaming: Option<bool>, batch_size: Option<usize>) ->  PolarsResult<(DataFrame, DataFrame, DataFrame)> {
 
     if streaming.unwrap_or(false) {
