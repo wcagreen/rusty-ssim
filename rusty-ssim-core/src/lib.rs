@@ -14,8 +14,10 @@ mod converters {
 }
 
 pub use crate::utils::ssim_exporters::{to_csv, to_parquet};
+pub use crate::utils::ssim_stream_to_file::stream_ssim_to_file;
 pub use converters::ssim_polars::ssim_to_dataframe;
 pub use converters::ssim_polars::ssim_to_dataframes;
+
 
 mod utils {
     pub mod ssim_exporters;
@@ -23,4 +25,5 @@ mod utils {
     pub mod ssim_parser_iterator;
     pub mod ssim_readers;
     pub mod ssim_streaming;
+    pub mod ssim_stream_to_file;
 }

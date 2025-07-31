@@ -19,7 +19,7 @@ use utils::ssim_readers::read_all_ssim;
 /// * `carrier` - carrier Polars Dataframes.
 /// # Errors
 /// Returns a Polars Dataframe and if merge fails, then it errors out.
-fn combine_carrier_and_flights(
+pub(crate) fn combine_carrier_and_flights(
     carrier: DataFrame,
     flights: DataFrame,
 ) -> PolarsResult<DataFrame> {
@@ -49,7 +49,7 @@ fn combine_carrier_and_flights(
 /// * `segments` - Segment Polars Dataframes.
 /// # Errors
 /// Returns a Polars Dataframe and if merge fails, then it errors out.
-fn combine_flights_and_segments(
+pub(crate) fn combine_flights_and_segments(
     flights: DataFrame,
     segments: DataFrame,
 ) -> PolarsResult<DataFrame> {

@@ -1,4 +1,4 @@
-pub use rusty_ssim_core::{ssim_to_dataframe, to_csv, to_parquet};
+pub use rusty_ssim_core::stream_ssim_to_file;
 
 use clap::{Args, Parser, Subcommand};
 
@@ -14,8 +14,6 @@ struct Cli {
 enum Commands {
     /// Convert SSIM to Dataframe.
     Df(SsimDfOptions),
-    /// Convert SSIM to JSON.
-    Json(SsimJsonOptions),
 }
 
 #[derive(Args)]
@@ -36,52 +34,22 @@ struct SsimDfOptions {
     #[arg(short, long, default_value = "snappy", required = true)]
     compression: String,
 
-    /// Streaming indicator.
-    #[arg(short, long, default_value = "false")]
-    streaming: bool,
-
     /// Batch size for streaming.
     #[arg(short, long, default_value = "10000")]
     batch_size: usize,
 
 }
 
-#[derive(Args)]
-struct SsimJsonOptions {
-    /// Path of the SSIM File
-    #[arg(short, long, required = true)]
-    ssim_path: String,
-
-    /// FileName / Output path + filename
-    #[arg(short, long, required = true)]
-    output_path: String,
-
-}
-
 fn main() {
     let cli = Cli::parse();
 
-    match &cli.command {
-        Commands::Df(options) => {
-            let mut ssim_dataframe =
-                ssim_to_dataframe(&options.ssim_path, Option::from(options.streaming), Option::from(options.batch_size)).expect("Failed to read SSIM records.");
-            if options.file_type == "csv" {
-                to_csv(&mut ssim_dataframe, &options.output_path)
-                    .expect("Unable to write out csv file.");
-            } else if options.file_type == "parquet" {
-                to_parquet(
-                    &mut ssim_dataframe,
-                    &options.output_path,
-                    &options.compression,
-                )
-                .expect("Unable to write out parquet file.");
-            } else {
-                panic!("Unsupported file type '{}'", options.file_type);
-            }
-        }
+    let Commands::Df(options) = &cli.command;
 
-        Commands::Json(_options) => {
-            println!("{}", "To Be Added. :/")
-        }
-    }
+    stream_ssim_to_file(
+        &options.ssim_path,
+        &options.output_path,
+        &options.file_type,
+        Some(options.compression.as_str()),
+        Some(options.batch_size),
+    ).expect("Failed to process SSIM file.");
 }
