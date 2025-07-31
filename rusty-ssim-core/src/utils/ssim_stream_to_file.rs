@@ -1,0 +1,328 @@
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use polars::prelude::*;
+use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
+use crate::generators::ssim_dataframe::convert_to_dataframes;
+use crate::utils::ssim_exporters::{to_csv, to_parquet};
+use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
+
+const DEFAULT_BATCH_SIZE: usize = 10_000;
+
+pub struct FileStreamingSsimReader {
+    reader: BufReader<File>,
+    batch_size: usize,
+    line_buffer: String,
+    peeked_line: Option<String>,
+    // Persistent carrier records until we hit record type 5
+    persistent_carriers: Vec<crate::records::carrier_record::CarrierRecord>,
+}
+
+impl FileStreamingSsimReader {
+    pub fn new(file_path: &str, batch_size: Option<usize>) -> std::io::Result<Self> {
+        let file = File::open(file_path)?;
+        let reader = BufReader::new(file);
+
+        Ok(FileStreamingSsimReader {
+            reader,
+            batch_size: batch_size.unwrap_or(DEFAULT_BATCH_SIZE),
+            line_buffer: String::new(),
+            peeked_line: None,
+            persistent_carriers: Vec::new(),
+        })
+    }
+
+    fn peek_next_line(&mut self) -> std::io::Result<Option<&str>> {
+        if self.peeked_line.is_none() {
+            let mut line = String::new();
+            match self.reader.read_line(&mut line) {
+                Ok(0) => return Ok(None), // EOF
+                Ok(_) => {
+                    // Remove trailing newline for consistent processing
+                    if line.ends_with('\n') {
+                        line.pop();
+                        if line.ends_with('\r') {
+                            line.pop();
+                        }
+                    }
+                    self.peeked_line = Some(line);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        Ok(self.peeked_line.as_deref())
+    }
+
+    fn consume_peeked_line(&mut self) -> Option<String> {
+        self.peeked_line.take()
+    }
+
+    fn read_next_line(&mut self) -> std::io::Result<Option<String>> {
+        if let Some(line) = self.consume_peeked_line() {
+            return Ok(Some(line));
+        }
+
+        self.line_buffer.clear();
+        match self.reader.read_line(&mut self.line_buffer) {
+            Ok(0) => Ok(None), // EOF
+            Ok(_) => {
+                // Remove trailing newline for consistent processing
+                if self.line_buffer.ends_with('\n') {
+                    self.line_buffer.pop();
+                    if self.line_buffer.ends_with('\r') {
+                        self.line_buffer.pop();
+                    }
+                }
+                Ok(Some(self.line_buffer.clone()))
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn should_continue_batch(&mut self, current_batch_size: usize, last_record_type: Option<char>) -> std::io::Result<bool> {
+        // If we haven't reached batch size, continue
+        if current_batch_size < self.batch_size {
+            return Ok(true);
+        }
+
+        // If the last record was type 3, we need to check if next records are type 4
+        if last_record_type == Some('3') {
+            loop {
+                match self.peek_next_line()? {
+                    Some(line) => {
+                        match line.chars().nth(0) {
+                            Some('4') => {
+                                // Next line is type 4, continue batch
+                                return Ok(true);
+                            }
+                            Some('3') | Some('2') | Some('1') | Some('5') => {
+                                // Next line is not type 4, stop batch
+                                return Ok(false);
+                            }
+                            _ => {
+                                // Skip invalid lines and continue checking
+                                self.consume_peeked_line();
+                                continue;
+                            }
+                        }
+                    }
+                    None => {
+                        // EOF, stop batch
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+
+        // If last record was type 4, we also need to check for more type 4s
+        if last_record_type == Some('4') {
+            loop {
+                match self.peek_next_line()? {
+                    Some(line) => {
+                        match line.chars().nth(0) {
+                            Some('4') => {
+                                // Another type 4, continue batch
+                                return Ok(true);
+                            }
+                            Some('3') | Some('2') | Some('1') | Some('5') => {
+                                // Different type, stop batch
+                                return Ok(false);
+                            }
+                            _ => {
+                                // Skip invalid lines and continue checking
+                                self.consume_peeked_line();
+                                continue;
+                            }
+                        }
+                    }
+                    None => {
+                        // EOF, stop batch
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+
+        // For other record types, stop at batch size
+        Ok(false)
+    }
+
+    pub fn stream_to_file(&mut self, output_path: &str, file_type: &str, compression: Option<&str>) -> PolarsResult<()> {
+        let mut final_combined_df = DataFrame::empty();
+
+        let mut flight_batch = Vec::new();
+        let mut segment_batch = Vec::new();
+
+        let mut last_record_type: Option<char> = None;
+
+        loop {
+            match self.read_next_line() {
+                Ok(Some(line)) => {
+                    let record_type = line.chars().nth(0);
+
+                    match record_type {
+                        Some('1') => {
+                            // Skip header records
+                            continue;
+                        }
+                        Some('2') => {
+                            if let Some(record) = parse_carrier_record(&line) {
+                                self.persistent_carriers.push(record);
+                                last_record_type = Some('2');
+                            }
+                        }
+                        Some('3') => {
+                            if let Some(record) = parse_flight_record_legs(&line) {
+                                flight_batch.push(record);
+                                last_record_type = Some('3');
+                            }
+                        }
+                        Some('4') => {
+                            if let Some(record) = parse_segment_record(&line) {
+                                segment_batch.push(record);
+                                last_record_type = Some('4');
+                            }
+                        }
+                        Some('5') => {
+                            // Process final batch with persistent carriers before clearing
+                            if !flight_batch.is_empty() || !segment_batch.is_empty() {
+                                let batch_df = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+                                final_combined_df = self.concatenate_dataframes(final_combined_df, batch_df)?;
+                                flight_batch.clear();
+                                segment_batch.clear();
+                            }
+
+                            // Clear persistent carriers after processing footer
+                            self.persistent_carriers.clear();
+                            last_record_type = Some('5');
+                            continue;
+                        }
+                        _ => continue,
+                    }
+
+                    // Only count flight and segment records for batch size (carriers are persistent)
+                    let current_batch_size = flight_batch.len() + segment_batch.len();
+
+                    // Check if we should process the current batch
+                    match self.should_continue_batch(current_batch_size, last_record_type) {
+                        Ok(should_continue) => {
+                            if !should_continue {
+                                // Process current batch with persistent carriers
+                                let batch_df = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+                                final_combined_df = self.concatenate_dataframes(final_combined_df, batch_df)?;
+
+                                // Clear flight and segment batches (keep carriers)
+                                flight_batch.clear();
+                                segment_batch.clear();
+                            }
+                        }
+                        Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+                    }
+                }
+                Ok(None) => break, // EOF
+                Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+            }
+        }
+
+        // Process any remaining records in the final batch
+        if !flight_batch.is_empty() || !segment_batch.is_empty() {
+            let batch_df = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+            final_combined_df = self.concatenate_dataframes(final_combined_df, batch_df)?;
+        }
+
+        // Write the final combined dataframe to file
+        self.write_dataframe_to_file(final_combined_df, output_path, file_type, compression)
+    }
+
+    fn process_batch_with_persistent_carriers(
+        &self,
+        flight_batch: &mut Vec<crate::records::flight_leg_records::FlightLegRecord>,
+        segment_batch: &mut Vec<crate::records::segment_records::SegmentRecords>,
+    ) -> PolarsResult<DataFrame> {
+        // Clone persistent carriers for this batch (don't consume them)
+        let carrier_batch = self.persistent_carriers.clone();
+
+        // Convert records to dataframes
+        let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
+            carrier_batch,
+            std::mem::take(flight_batch),
+            std::mem::take(segment_batch),
+        )?;
+
+        // Combine carrier and flights
+        let mut combined_df = combine_carrier_and_flights(carrier_df, flight_df)?;
+
+        // Combine with segments
+        combined_df = combine_flights_and_segments(combined_df, segment_df)?;
+
+        Ok(combined_df)
+    }
+
+    fn concatenate_dataframes(&self, mut existing: DataFrame, new: DataFrame) -> PolarsResult<DataFrame> {
+        if existing.is_empty() {
+            Ok(new)
+        } else if new.is_empty() {
+            Ok(existing)
+        } else {
+            existing.vstack_mut(&new)?;
+            Ok(existing)
+        }
+    }
+
+    fn write_dataframe_to_file(
+        &self,
+        mut dataframe: DataFrame,
+        output_path: &str,
+        file_type: &str,
+        compression: Option<&str>,
+    ) -> PolarsResult<()> {
+        match file_type.to_lowercase().as_str() {
+            "csv" => {
+                to_csv(&mut dataframe, output_path)
+                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write CSV: {}", e).into()))?;
+            }
+            "parquet" => {
+                let compression_str = compression.unwrap_or("snappy");
+                to_parquet(&mut dataframe, output_path, compression_str)
+                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write Parquet: {}", e).into()))?;
+            }
+            _ => {
+                return Err(PolarsError::ComputeError(
+                    format!("Unsupported file type: {}", file_type).into()
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Smart streaming function that processes SSIM files in batches while respecting
+/// record type 3 and 4 relationships, then writes the result to a file.
+///
+/// # Arguments
+/// * `file_path` - Path to the SSIM file
+/// * `output_path` - Path for the output file
+/// * `file_type` - Output format ("csv" or "parquet")
+/// * `compression` - Compression type for parquet files (optional)
+/// * `batch_size` - Number of records per batch (optional, defaults to 10,000)
+///
+/// # Behavior
+/// This function intelligently handles batching by:
+/// - Processing records in batches of the specified size
+/// - When reaching batch size, if the last record is type 3, it peeks ahead
+/// - Continues adding type 4 records that belong to the type 3 record
+/// - Stops when encountering a non-type-4 record or EOF
+/// - Combines carrier, flight, and segment data into a single dataframe
+/// - Writes the final result directly to the specified file
+pub fn stream_ssim_to_file(
+    file_path: &str,
+    output_path: &str,
+    file_type: &str,
+    compression: Option<&str>,
+    batch_size: Option<usize>,
+) -> PolarsResult<()> {
+    let mut reader = FileStreamingSsimReader::new(file_path, batch_size)
+        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
+
+    reader.stream_to_file(output_path, file_type, compression)
+}

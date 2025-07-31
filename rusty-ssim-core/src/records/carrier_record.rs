@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct CarrierRecord {
     pub airline_designator: String,
     pub control_duplicate_indicator: String,

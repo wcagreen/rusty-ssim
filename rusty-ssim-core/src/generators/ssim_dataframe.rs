@@ -1,130 +1,190 @@
 use polars::prelude::*;
 use crate::utils::ssim_parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
 
-
 pub fn convert_to_dataframes(
     carriers: Vec<CarrierRecord>,
     flights: Vec<FlightLegRecord>,
     segments: Vec<SegmentRecords>,
-) -> polars::prelude::PolarsResult<(polars::prelude::DataFrame, polars::prelude::DataFrame, polars::prelude::DataFrame)> {
+) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+    
 
-    let carrier_series = CarrierRecord::get_columns(&carriers)?;
-    let flight_series = FlightLegRecord::get_columns(&flights)?;
-    let segment_series = SegmentRecords::get_columns(&segments)?;
+    let carrier_df = if !carriers.is_empty() {
+        df! {
+            "airline_designator" => carriers.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
+            "control_duplicate_indicator" => carriers.iter().map(|r| r.control_duplicate_indicator.as_str()).collect::<Vec<_>>(),
+            "time_mode" => carriers.iter().map(|r| r.time_mode.as_str()).collect::<Vec<_>>(),
+            "season" => carriers.iter().map(|r| r.season.as_str()).collect::<Vec<_>>(),
+            "period_of_schedule_validity_from" => carriers.iter().map(|r| r.period_of_schedule_validity_from.as_str()).collect::<Vec<_>>(),
+            "period_of_schedule_validity_to" => carriers.iter().map(|r| r.period_of_schedule_validity_to.as_str()).collect::<Vec<_>>(),
+            "creation_date" => carriers.iter().map(|r| r.creation_date.as_str()).collect::<Vec<_>>(),
+            "title_of_data" => carriers.iter().map(|r| r.title_of_data.as_str()).collect::<Vec<_>>(),
+            "release_date" => carriers.iter().map(|r| r.release_date.as_str()).collect::<Vec<_>>(),
+            "schedule_status" => carriers.iter().map(|r| r.schedule_status.as_str()).collect::<Vec<_>>(),
+            "general_information" => carriers.iter().map(|r| r.general_information.as_str()).collect::<Vec<_>>(),
+            "in_flight_service_information" => carriers.iter().map(|r| r.in_flight_service_information.as_str()).collect::<Vec<_>>(),
+            "electronic_ticketing_information" => carriers.iter().map(|r| r.electronic_ticketing_information.as_str()).collect::<Vec<_>>(),
+            "creation_time" => carriers.iter().map(|r| r.creation_time.as_str()).collect::<Vec<_>>(),
+            "record_type" => carriers.iter().map(|r| r.record_type.to_string()).collect::<Vec<_>>(),
+            "record_serial_number" => carriers.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
+        }?
+    } else {
+        df! {
+            "airline_designator" => Vec::<&str>::new(),
+            "control_duplicate_indicator" => Vec::<&str>::new(),
+            "time_mode" => Vec::<&str>::new(),
+            "season" => Vec::<&str>::new(),
+            "period_of_schedule_validity_from" => Vec::<&str>::new(),
+            "period_of_schedule_validity_to" => Vec::<&str>::new(),
+            "creation_date" => Vec::<&str>::new(),
+            "title_of_data" => Vec::<&str>::new(),
+            "release_date" => Vec::<&str>::new(),
+            "schedule_status" => Vec::<&str>::new(),
+            "general_information" => Vec::<&str>::new(),
+            "in_flight_service_information" => Vec::<&str>::new(),
+            "electronic_ticketing_information" => Vec::<&str>::new(),
+            "creation_time" => Vec::<&str>::new(),
+            "record_type" => Vec::<String>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
+    };
 
+        let flight_df = if !flights.is_empty() {
+        df! {
+            "flight_designator" => flights.iter().map(|r| r.flight_designator.as_str()).collect::<Vec<_>>(),
+            "operational_suffix" => flights.iter().map(|r| r.operational_suffix.as_str()).collect::<Vec<_>>(),
+            "airline_designator" => flights.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
+            "flight_number" => flights.iter().map(|r| r.flight_number.as_str()).collect::<Vec<_>>(),
+            "itinerary_variation_identifier" => flights.iter().map(|r| r.itinerary_variation_identifier.as_str()).collect::<Vec<_>>(),
+            "leg_sequence_number" => flights.iter().map(|r| r.leg_sequence_number.as_str()).collect::<Vec<_>>(),
+            "service_type" => flights.iter().map(|r| r.service_type.as_str()).collect::<Vec<_>>(),
+            "period_of_operation_from" => flights.iter().map(|r| r.period_of_operation_from.as_str()).collect::<Vec<_>>(),
+            "period_of_operation_to" => flights.iter().map(|r| r.period_of_operation_to.as_str()).collect::<Vec<_>>(),
+            "days_of_operation" => flights.iter().map(|r| r.days_of_operation.as_str()).collect::<Vec<_>>(),
+            "frequency_rate" => flights.iter().map(|r| r.frequency_rate.as_str()).collect::<Vec<_>>(),
+            "departure_station" => flights.iter().map(|r| r.departure_station.as_str()).collect::<Vec<_>>(),
+            "scheduled_time_of_passenger_departure" => flights.iter().map(|r| r.scheduled_time_of_passenger_departure.as_str()).collect::<Vec<_>>(),
+            "scheduled_time_of_aircraft_departure" => flights.iter().map(|r| r.scheduled_time_of_aircraft_departure.as_str()).collect::<Vec<_>>(),
+            "time_variation_departure" => flights.iter().map(|r| r.time_variation_departure.as_str()).collect::<Vec<_>>(),
+            "passenger_terminal_departure" => flights.iter().map(|r| r.passenger_terminal_departure.as_str()).collect::<Vec<_>>(),
+            "arrival_station" => flights.iter().map(|r| r.arrival_station.as_str()).collect::<Vec<_>>(),
+            "scheduled_time_of_aircraft_arrival" => flights.iter().map(|r| r.scheduled_time_of_aircraft_arrival.as_str()).collect::<Vec<_>>(),
+            "scheduled_time_of_passenger_arrival" => flights.iter().map(|r| r.scheduled_time_of_passenger_arrival.as_str()).collect::<Vec<_>>(),
+            "time_variation_arrival" => flights.iter().map(|r| r.time_variation_arrival.as_str()).collect::<Vec<_>>(),
+            "passenger_terminal_arrival" => flights.iter().map(|r| r.passenger_terminal_arrival.as_str()).collect::<Vec<_>>(),
+            "aircraft_type" => flights.iter().map(|r| r.aircraft_type.as_str()).collect::<Vec<_>>(),
+            "passenger_reservations_booking_designator" => flights.iter().map(|r| r.passenger_reservations_booking_designator.as_str()).collect::<Vec<_>>(),
+            "passenger_reservations_booking_modifier" => flights.iter().map(|r| r.passenger_reservations_booking_modifier.as_str()).collect::<Vec<_>>(),
+            "meal_service_note" => flights.iter().map(|r| r.meal_service_note.as_str()).collect::<Vec<_>>(),
+            "joint_operation_airline_designators" => flights.iter().map(|r| r.joint_operation_airline_designators.as_str()).collect::<Vec<_>>(),
+            "min_connecting_time_status_departure"=> flights.iter().map(|r| r.min_connecting_time_status_departure.as_str()).collect::<Vec<_>>(),
+            "min_connecting_time_status_arrival"=> flights.iter().map(|r| r.min_connecting_time_status_arrival.as_str()).collect::<Vec<_>>(),
+            "secure_flight_indicator" => flights.iter().map(|r| r.secure_flight_indicator.as_str()).collect::<Vec<_>>(),
+            "itinerary_variation_identifier_overflow" => flights.iter().map(|r| r.itinerary_variation_identifier_overflow.as_str()).collect::<Vec<_>>(),
+            "aircraft_owner" => flights.iter().map(|r| r.aircraft_owner.as_str()).collect::<Vec<_>>(),
+            "cockpit_crew_employer" => flights.iter().map(|r| r.cockpit_crew_employer.as_str()).collect::<Vec<_>>(),
+            "cabin_crew_employer" => flights.iter().map(|r| r.cabin_crew_employer.as_str()).collect::<Vec<_>>(),
+            "onward_flight" => flights.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
+            "airline_designator2" => flights.iter().map(|r| r.airline_designator2.as_str()).collect::<Vec<_>>(),
+            "flight_number2" => flights.iter().map(|r| r.flight_number2.as_str()).collect::<Vec<_>>(),
+            "aircraft_rotation_layover" => flights.iter().map(|r| r.aircraft_rotation_layover.as_str()).collect::<Vec<_>>(),
+            "operational_suffix2" => flights.iter().map(|r| r.operational_suffix2.as_str()).collect::<Vec<_>>(),
+            "flight_transit_layover" => flights.iter().map(|r| r.flight_transit_layover.as_str()).collect::<Vec<_>>(),
+            "operating_airline_disclosure" => flights.iter().map(|r| r.operating_airline_disclosure.as_str()).collect::<Vec<_>>(),
+            "traffic_restriction_code" => flights.iter().map(|r| r.traffic_restriction_code.as_str()).collect::<Vec<_>>(),
+            "traffic_restriction_code_leg_overflow_indicator" => flights.iter().map(|r| r.traffic_restriction_code_leg_overflow_indicator.as_str()).collect::<Vec<_>>(),
+            "aircraft_configuration" => flights.iter().map(|r| r.aircraft_configuration.as_str()).collect::<Vec<_>>(),
+            "date_variation" => flights.iter().map(|r| r.date_variation.as_str()).collect::<Vec<_>>(),
+            "record_type" => flights.iter().map(|r| r.record_type.to_string()).collect::<Vec<_>>(),
+            "record_serial_number" => flights.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
+        }?
+    } else {
+        df! {
+            "flight_designator" => Vec::<&str>::new(),
+            "operational_suffix" => Vec::<&str>::new(),
+            "airline_designator" => Vec::<&str>::new(),
+            "flight_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier" => Vec::<&str>::new(),
+            "leg_sequence_number" => Vec::<&str>::new(),
+            "service_type" => Vec::<&str>::new(),
+            "period_of_operation_from" =>Vec::<&str>::new(),
+            "period_of_operation_to" => Vec::<&str>::new(),
+            "days_of_operation" => Vec::<&str>::new(),
+            "frequency_rate" => Vec::<&str>::new(),
+            "departure_station" => Vec::<&str>::new(),
+            "scheduled_time_of_passenger_departure" => Vec::<&str>::new(),
+            "scheduled_time_of_aircraft_departure" => Vec::<&str>::new(),
+            "time_variation_departure" => Vec::<&str>::new(),
+            "passenger_terminal_departure" => Vec::<&str>::new(),
+            "arrival_station" => Vec::<&str>::new(),
+            "scheduled_time_of_aircraft_arrival" => Vec::<&str>::new(),
+            "scheduled_time_of_passenger_arrival" => Vec::<&str>::new(),
+            "time_variation_arrival" => Vec::<&str>::new(),
+            "passenger_terminal_arrival" => Vec::<&str>::new(),
+            "aircraft_type" => Vec::<&str>::new(),
+            "passenger_reservations_booking_designator" => Vec::<&str>::new(),
+            "passenger_reservations_booking_modifier" => Vec::<&str>::new(),
+            "meal_service_note" => Vec::<&str>::new(),
+            "joint_operation_airline_designators" => Vec::<&str>::new(),
+            "min_connecting_time_status_departure"=> Vec::<&str>::new(),
+            "min_connecting_time_status_arrival"=> Vec::<&str>::new(),
+            "secure_flight_indicator" => Vec::<&str>::new(),
+            "itinerary_variation_identifier_overflow" => Vec::<&str>::new(),
+            "aircraft_owner" => Vec::<&str>::new(),
+            "cockpit_crew_employer" => Vec::<&str>::new(),
+            "cabin_crew_employer" => Vec::<&str>::new(),
+            "onward_flight" => Vec::<&str>::new(),
+            "airline_designator2" => Vec::<&str>::new(),
+            "flight_number2" => Vec::<&str>::new(),
+            "aircraft_rotation_layover" => Vec::<&str>::new(),
+            "operational_suffix2" => Vec::<&str>::new(),
+            "flight_transit_layover" => Vec::<&str>::new(),
+            "operating_airline_disclosure" => Vec::<&str>::new(),
+            "traffic_restriction_code" => Vec::<&str>::new(),
+            "traffic_restriction_code_leg_overflow_indicator" => Vec::<&str>::new(),
+            "aircraft_configuration" => Vec::<&str>::new(),
+            "date_variation" => Vec::<&str>::new(),
+            "record_type" => Vec::<&str>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
+    };
 
-    let mut carrier_df = polars::frame::DataFrame::default();
-    for s in carrier_series {
-        carrier_df.with_column(s)?;
-    }
-    let mut flight_df = polars::frame::DataFrame::default();
-    for s in flight_series {
-        flight_df.with_column(s)?;
-    }
-    let mut segment_df = polars::frame::DataFrame::default();
-    for s in segment_series {
-        segment_df.with_column(s)?;
-    }
-    Ok((carrier_df, flight_df, segment_df))
-}
+    let segment_df = if !segments.is_empty() {
+        df! {
+            "flight_designator" => segments.iter().map(|r| r.flight_designator.as_str()).collect::<Vec<_>>(),
+            "operational_suffix" => segments.iter().map(|r| r.operational_suffix.as_str()).collect::<Vec<_>>(),
+            "airline_designator" => segments.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
+            "flight_number" => segments.iter().map(|r| r.flight_number.as_str()).collect::<Vec<_>>(),
+            "itinerary_variation_identifier" => segments.iter().map(|r| r.itinerary_variation_identifier.as_str()).collect::<Vec<_>>(),
+            "leg_sequence_number" => segments.iter().map(|r| r.leg_sequence_number.as_str()).collect::<Vec<_>>(),
+            "itinerary_variation_identifier_overflow" => segments.iter().map(|r| r.itinerary_variation_identifier_overflow.as_str()).collect::<Vec<_>>(),
+            "board_point_indicator" => segments.iter().map(|r| r.board_point_indicator.as_str()).collect::<Vec<_>>(),
+            "off_point_indicator" => segments.iter().map(|r| r.off_point_indicator.as_str()).collect::<Vec<_>>(),
+            "data_element_identifier" => segments.iter().map(|r| r.data_element_identifier.as_str()).collect::<Vec<_>>(),
+            "board_point" => segments.iter().map(|r| r.board_point.as_str()).collect::<Vec<_>>(),
+            "off_point" => segments.iter().map(|r| r.off_point.as_str()).collect::<Vec<_>>(),
+            "data" => segments.iter().map(|r| r.data.as_str()).collect::<Vec<_>>(),
+            "record_type" => segments.iter().map(|r| r.record_type.to_string()).collect::<Vec<_>>(),
+            "record_serial_number" => segments.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
+        }?
+    } else {
+        df! {
+            "flight_designator" => Vec::<&str>::new(),
+            "operational_suffix" => Vec::<&str>::new(),
+            "airline_designator" => Vec::<&str>::new(),
+            "flight_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier" => Vec::<&str>::new(),
+            "leg_sequence_number" => Vec::<&str>::new(),
+            "itinerary_variation_identifier_overflow" => Vec::<&str>::new(),
+            "board_point_indicator" => Vec::<&str>::new(),
+            "off_point_indicator" => Vec::<&str>::new(),
+            "data_element_identifier" => Vec::<&str>::new(),
+            "board_point" => Vec::<&str>::new(),
+            "off_point" => Vec::<&str>::new(),
+            "data" => Vec::<&str>::new(),
+            "record_type" => Vec::<String>::new(),
+            "record_serial_number" => Vec::<&str>::new(),
+        }?
+    };
 
-
-impl CarrierRecord {
-    pub fn get_columns(records: &[CarrierRecord]) -> PolarsResult<Vec<Series>> {
-        Ok(vec![
-            polars::prelude::Series::new("airline_designator".into(), records.iter().map(|r| r.airline_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("control_duplicate_indicator".into(), records.iter().map(|r| r.control_duplicate_indicator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("time_mode".into(), records.iter().map(|r| r.time_mode.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("season".into(), records.iter().map(|r| r.season.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("period_of_schedule_validity_from".into(), records.iter().map(|r| r.period_of_schedule_validity_from.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("period_of_schedule_validity_to".into(), records.iter().map(|r| r.period_of_schedule_validity_to.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("creation_date".into(), records.iter().map(|r| r.creation_date.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("title_of_data".into(), records.iter().map(|r| r.title_of_data.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("release_date".into(), records.iter().map(|r| r.release_date.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("schedule_status".into(), records.iter().map(|r| r.schedule_status.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("general_information".into(), records.iter().map(|r| r.general_information.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("in_flight_service_information".into(), records.iter().map(|r| r.in_flight_service_information.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("electronic_ticketing_information".into(), records.iter().map(|r| r.electronic_ticketing_information.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("creation_time".into(), records.iter().map(|r| r.creation_time.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_type".into(), records.iter().map(|r| r.record_type.to_string()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_serial_number".into(), records.iter().map(|r| r.record_serial_number.clone()).collect::<Vec<String>>()),
-        ])
-    }
-}
-
-
-impl FlightLegRecord {
-    pub fn get_columns(records: &[FlightLegRecord]) -> PolarsResult<Vec<Series>> {
-        Ok(vec![
-            polars::prelude::Series::new("flight_designator".into(), records.iter().map(|r| r.flight_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("operational_suffix".into(), records.iter().map(|r| r.operational_suffix.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("airline_designator".into(), records.iter().map(|r| r.airline_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("flight_number".into(), records.iter().map(|r| r.flight_number.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("itinerary_variation_identifier".into(), records.iter().map(|r| r.itinerary_variation_identifier.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("leg_sequence_number".into(), records.iter().map(|r| r.leg_sequence_number.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("service_type".into(), records.iter().map(|r| r.service_type.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("period_of_operation_from".into(), records.iter().map(|r| r.period_of_operation_from.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("period_of_operation_to".into(), records.iter().map(|r| r.period_of_operation_to.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("days_of_operation".into(), records.iter().map(|r| r.days_of_operation.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("frequency_rate".into(), records.iter().map(|r| r.frequency_rate.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("departure_station".into(), records.iter().map(|r| r.departure_station.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("scheduled_time_of_passenger_departure".into(), records.iter().map(|r| r.scheduled_time_of_passenger_departure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("scheduled_time_of_aircraft_departure".into(), records.iter().map(|r| r.scheduled_time_of_aircraft_departure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("time_variation_departure".into(), records.iter().map(|r| r.time_variation_departure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("passenger_terminal_departure".into(), records.iter().map(|r| r.passenger_terminal_departure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("arrival_station".into(), records.iter().map(|r| r.arrival_station.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("scheduled_time_of_aircraft_arrival".into(), records.iter().map(|r| r.scheduled_time_of_aircraft_arrival.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("scheduled_time_of_passenger_arrival".into(), records.iter().map(|r| r.scheduled_time_of_passenger_arrival.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("time_variation_arrival".into(), records.iter().map(|r| r.time_variation_arrival.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("passenger_terminal_arrival".into(), records.iter().map(|r| r.passenger_terminal_arrival.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("aircraft_type".into(), records.iter().map(|r| r.aircraft_type.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("passenger_reservations_booking_designator".into(), records.iter().map(|r| r.passenger_reservations_booking_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("passenger_reservations_booking_modifier".into(), records.iter().map(|r| r.passenger_reservations_booking_modifier.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("meal_service_note".into(), records.iter().map(|r| r.meal_service_note.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("joint_operation_airline_designators".into(), records.iter().map(|r| r.joint_operation_airline_designators.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("min_connecting_time_status_departure".into(), records.iter().map(|r| r.min_connecting_time_status_departure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("min_connecting_time_status_arrival".into(), records.iter().map(|r| r.min_connecting_time_status_arrival.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("secure_flight_indicator".into(), records.iter().map(|r| r.secure_flight_indicator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("itinerary_variation_identifier_overflow".into(), records.iter().map(|r| r.itinerary_variation_identifier_overflow.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("aircraft_owner".into(), records.iter().map(|r| r.aircraft_owner.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("cockpit_crew_employer".into(), records.iter().map(|r| r.cockpit_crew_employer.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("cabin_crew_employer".into(), records.iter().map(|r| r.cabin_crew_employer.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("onward_flight".into(), records.iter().map(|r| r.onward_flight.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("airline_designator2".into(), records.iter().map(|r| r.airline_designator2.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("flight_number2".into(), records.iter().map(|r| r.flight_number2.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("aircraft_rotation_layover".into(), records.iter().map(|r| r.aircraft_rotation_layover.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("operational_suffix2".into(), records.iter().map(|r| r.operational_suffix2.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("flight_transit_layover".into(), records.iter().map(|r| r.flight_transit_layover.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("operating_airline_disclosure".into(), records.iter().map(|r| r.operating_airline_disclosure.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("traffic_restriction_code".into(), records.iter().map(|r| r.traffic_restriction_code.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("traffic_restriction_code_leg_overflow_indicator".into(), records.iter().map(|r| r.traffic_restriction_code_leg_overflow_indicator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("aircraft_configuration".into(), records.iter().map(|r| r.aircraft_configuration.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("date_variation".into(), records.iter().map(|r| r.date_variation.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_type".into(), records.iter().map(|r| r.record_type.to_string()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_serial_number".into(), records.iter().map(|r| r.record_serial_number.clone()).collect::<Vec<String>>()),
-        ])
-    }
-}
-
-
-impl SegmentRecords {
-    pub fn get_columns(records: &[SegmentRecords]) -> PolarsResult<Vec<Series>> {
-        Ok(vec![
-            polars::prelude::Series::new("flight_designator".into(), records.iter().map(|r| r.flight_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("operational_suffix".into(), records.iter().map(|r| r.operational_suffix.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("airline_designator".into(), records.iter().map(|r| r.airline_designator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("flight_number".into(), records.iter().map(|r| r.flight_number.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("itinerary_variation_identifier".into(), records.iter().map(|r| r.itinerary_variation_identifier.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("leg_sequence_number".into(), records.iter().map(|r| r.leg_sequence_number.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("itinerary_variation_identifier_overflow".into(), records.iter().map(|r| r.itinerary_variation_identifier_overflow.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("board_point_indicator".into(), records.iter().map(|r| r.board_point_indicator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("off_point_indicator".into(), records.iter().map(|r| r.off_point_indicator.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("data_element_identifier".into(), records.iter().map(|r| r.data_element_identifier.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("board_point".into(), records.iter().map(|r| r.board_point.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("off_point".into(), records.iter().map(|r| r.off_point.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("data".into(), records.iter().map(|r| r.data.clone()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_type".into(), records.iter().map(|r| r.record_type.to_string()).collect::<Vec<String>>()),
-            polars::prelude::Series::new("record_serial_number".into(), records.iter().map(|r| r.record_serial_number.clone()).collect::<Vec<String>>()),
-        ])
-    }
+        Ok((carrier_df, flight_df, segment_df))
 }

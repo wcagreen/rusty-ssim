@@ -13,8 +13,8 @@ polars.workspace = true
 rusty-ssim-core.workspace = true
 
 [lib]
-name = "rusty_ssim"
+name = "rustyssim"
 crate-type = ["cdylib"]
 
 [package.metadata.maturin]
-module-name = "rusty_ssim.rusty_ssim"
+module-name = "rustyssim.rustyssim"
