@@ -6,7 +6,7 @@ pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, stream_ssim_to_
 
 #[pyfunction]
 fn parse_ssim_to_file(
-    py: Python<'_>,
+    _py: Python<'_>,
     file_path: &str,
     output_path: &str,
     file_type: &str,

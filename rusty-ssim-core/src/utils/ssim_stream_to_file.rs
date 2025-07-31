@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::io::{BufRead, BufReader};
 use polars::prelude::*;
 use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
 use crate::generators::ssim_dataframe::convert_to_dataframes;
