@@ -22,7 +22,5 @@ pub use converters::ssim_polars::ssim_to_dataframes;
 mod utils {
     pub mod ssim_exporters;
     pub mod ssim_parser;
-    pub mod ssim_parser_iterator;
-    pub mod ssim_readers;
     pub mod ssim_streaming;
 }
