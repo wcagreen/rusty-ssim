@@ -35,8 +35,8 @@ pub(crate) fn combine_carrier_and_flights(
                 .clone()
                 .lazy()
                 .drop([col("record_type"), col("record_serial_number")]),
-            [col("airline_designator")],
-            [col("airline_designator")],
+            [col("airline_designator"), col("control_duplicate_indicator")],
+            [col("airline_designator"), col("control_duplicate_indicator")],
             JoinArgs::new(JoinType::Left),
         )
         .collect()?;
@@ -70,6 +70,7 @@ pub(crate) fn combine_flights_and_segments(
         .join(
             segments.clone().lazy().select([
                 col("flight_designator"),
+                col("control_duplicate_indicator"),
                 col("board_point_indicator"),
                 col("off_point_indicator"),
                 col("board_point"),
@@ -77,8 +78,8 @@ pub(crate) fn combine_flights_and_segments(
                 col("data_element_identifier"),
                 col("data"),
             ]),
-            [col("flight_designator")],
-            [col("flight_designator")],
+            [col("flight_designator"), col("control_duplicate_indicator")],
+            [col("flight_designator"), col("control_duplicate_indicator")],
             JoinArgs::new(JoinType::Left),
         )
         .collect()?;

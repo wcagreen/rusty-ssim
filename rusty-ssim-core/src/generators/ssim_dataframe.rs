@@ -7,7 +7,7 @@ pub fn convert_to_dataframes(
     segments: Vec<SegmentRecords>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
     
-
+    
     let carrier_df = if !carriers.is_empty() {
         df! {
             "airline_designator" => carriers.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
@@ -53,6 +53,7 @@ pub fn convert_to_dataframes(
             "flight_designator" => flights.iter().map(|r| r.flight_designator.as_str()).collect::<Vec<_>>(),
             "operational_suffix" => flights.iter().map(|r| r.operational_suffix.as_str()).collect::<Vec<_>>(),
             "airline_designator" => flights.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
+            "control_duplicate_indicator" => flights.iter().map(|r| r.control_duplicate_indicator.as_str()).collect::<Vec<_>>(),
             "flight_number" => flights.iter().map(|r| r.flight_number.as_str()).collect::<Vec<_>>(),
             "itinerary_variation_identifier" => flights.iter().map(|r| r.itinerary_variation_identifier.as_str()).collect::<Vec<_>>(),
             "leg_sequence_number" => flights.iter().map(|r| r.leg_sequence_number.as_str()).collect::<Vec<_>>(),
@@ -102,6 +103,7 @@ pub fn convert_to_dataframes(
             "flight_designator" => Vec::<&str>::new(),
             "operational_suffix" => Vec::<&str>::new(),
             "airline_designator" => Vec::<&str>::new(),
+            "control_duplicate_indicator" => Vec::<&str>::new(),
             "flight_number" => Vec::<&str>::new(),
             "itinerary_variation_identifier" => Vec::<&str>::new(),
             "leg_sequence_number" => Vec::<&str>::new(),
@@ -153,6 +155,7 @@ pub fn convert_to_dataframes(
             "flight_designator" => segments.iter().map(|r| r.flight_designator.as_str()).collect::<Vec<_>>(),
             "operational_suffix" => segments.iter().map(|r| r.operational_suffix.as_str()).collect::<Vec<_>>(),
             "airline_designator" => segments.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),
+            "control_duplicate_indicator" => segments.iter().map(|r| r.control_duplicate_indicator.as_str()).collect::<Vec<_>>(),
             "flight_number" => segments.iter().map(|r| r.flight_number.as_str()).collect::<Vec<_>>(),
             "itinerary_variation_identifier" => segments.iter().map(|r| r.itinerary_variation_identifier.as_str()).collect::<Vec<_>>(),
             "leg_sequence_number" => segments.iter().map(|r| r.leg_sequence_number.as_str()).collect::<Vec<_>>(),
@@ -171,6 +174,7 @@ pub fn convert_to_dataframes(
             "flight_designator" => Vec::<&str>::new(),
             "operational_suffix" => Vec::<&str>::new(),
             "airline_designator" => Vec::<&str>::new(),
+            "control_duplicate_indicator" => Vec::<&str>::new(),
             "flight_number" => Vec::<&str>::new(),
             "itinerary_variation_identifier" => Vec::<&str>::new(),
             "leg_sequence_number" => Vec::<&str>::new(),

@@ -173,13 +173,13 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line) {
+                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(record) = parse_segment_record(&line) {
+                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
@@ -254,13 +254,13 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line) {
+                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(record) = parse_segment_record(&line) {
+                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
@@ -342,13 +342,13 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line) {
+                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(record) = parse_segment_record(&line) {
+                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
