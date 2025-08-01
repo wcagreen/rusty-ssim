@@ -5,6 +5,7 @@ use pyo3::types::PyTuple;
 pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, stream_ssim_to_file};
 
 #[pyfunction]
+#[pyo3(signature = (file_path, output_path, file_type, compression=None, batch_size=10000))]
 fn parse_ssim_to_file(
     _py: Python<'_>,
     file_path: &str,
@@ -28,14 +29,14 @@ fn parse_ssim_to_file(
 }
 
 #[pyfunction]
+#[pyo3(signature = (file_path, batch_size=10000))]
 fn split_ssim_to_dataframes(
     py: Python<'_>,
     file_path: &str,
-    streaming: Option<bool>,
     batch_size: Option<usize>,
 ) -> PyResult<Py<PyAny>> {
     let (carrier_df, flights_df, segments_df) =
-        ssim_to_dataframes(file_path, streaming, batch_size)
+        ssim_to_dataframes(file_path, batch_size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let polars = py.import("polars")?;
@@ -62,13 +63,13 @@ fn split_ssim_to_dataframes(
 }
 
 #[pyfunction]
+#[pyo3(signature = (file_path, batch_size=10000))]
 fn parse_ssim_to_dataframe(
     py: Python<'_>,
     file_path: &str,
-    streaming: Option<bool>,
     batch_size: Option<usize>,
 ) -> PyResult<PyObject> {
-    let mut ssim_dataframe = ssim_to_dataframe(file_path, streaming, batch_size)
+    let mut ssim_dataframe = ssim_to_dataframe(file_path, batch_size)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let mut buffer = Vec::new();
