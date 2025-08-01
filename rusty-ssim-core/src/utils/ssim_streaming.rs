@@ -316,6 +316,8 @@ impl StreamingSsimReader {
             final_flight_df = concatenate_dataframes(final_flight_df, flight_df)?;
             final_segment_df = concatenate_dataframes(final_segment_df, segment_df)?;
         }
+        
+        final_carrier_df = final_carrier_df.unique_stable(None, UniqueKeepStrategy::First, None)?;
 
         Ok((final_carrier_df, final_flight_df, final_segment_df))
     }
