@@ -87,18 +87,18 @@ impl StreamingSsimReader {
             return Ok(true);
         }
 
-        // If the last record was type 3, we need to check if next records are type 4
+        // If the last record was type 3, we need to check if the next records are type 4
         if last_record_type == Some('3') {
             loop {
                 match self.peek_next_line()? {
                     Some(line) => {
                         match line.chars().nth(0) {
                             Some('4') => {
-                                // Next line is type 4, continue batch
+                                // The Next line is type 4, continue batch
                                 return Ok(true);
                             }
                             Some('3') | Some('2') | Some('1') | Some('5') => {
-                                // Next line is not type 4, stop batch
+                                // The Next line is not type 4, stop batch
                                 return Ok(false);
                             }
                             _ => {
@@ -116,7 +116,7 @@ impl StreamingSsimReader {
             }
         }
 
-        // If last record was type 4, we also need to check for more type 4s
+        // If the last record was type 4, we also need to check for more type 4's
         if last_record_type == Some('4') {
             loop {
                 match self.peek_next_line()? {
@@ -150,7 +150,7 @@ impl StreamingSsimReader {
     }
     
 
-    /// Process SSIM file and return a single combined DataFrame in memory
+    /// Process an SSIM file and return a single combined DataFrame in memory
     pub fn process_to_combined_dataframe(&mut self) -> PolarsResult<DataFrame> {
         let mut final_combined_df = DataFrame::empty();
 
@@ -165,6 +165,7 @@ impl StreamingSsimReader {
 
                     match record_type {
                         Some('1') => continue, // Skip header records
+                        Some('0') => continue, // Skip Zeros Records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
                                 self.persistent_carriers.push(record);
@@ -184,7 +185,7 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('5') => {
-                            // Process final batch with persistent carriers before clearing
+                            // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
                                 let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
                                 final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
@@ -245,6 +246,7 @@ impl StreamingSsimReader {
 
                     match record_type {
                         Some('1') => continue, // Skip header records
+                        Some('0') => continue, // Skip Zero records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
                                 self.persistent_carriers.push(record);
@@ -264,7 +266,7 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('5') => {
-                            // Process final batch with persistent carriers before clearing
+                            // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
                                 let (carrier_df, flight_df, segment_df) = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
 
@@ -318,7 +320,7 @@ impl StreamingSsimReader {
         Ok((final_carrier_df, final_flight_df, final_segment_df))
     }
 
-    /// Process SSIM file and write combined DataFrame directly to file
+    /// Process the SSIM file and write the combined DataFrame directly to file
     fn stream_to_file(&mut self, output_path: &str, file_type: &str, compression: Option<&str>) -> PolarsResult<()> {
         let mut final_combined_df = DataFrame::empty();
 
@@ -352,7 +354,7 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('5') => {
-                            // Process final batch with persistent carriers before clearing
+                            // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
                                 let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
                                 final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
