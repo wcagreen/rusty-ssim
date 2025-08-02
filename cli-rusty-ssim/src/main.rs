@@ -1,6 +1,5 @@
-pub use rusty_ssim_core::ssim_to_file;
-
 use clap::{Args, Parser, Subcommand};
+use rusty_ssim_core::{ssim_to_csv, ssim_to_parquets};
 
 #[derive(Parser)]
 #[command(name = "ssim")]
@@ -13,22 +12,19 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Convert SSIM to Dataframe.
-    Df(SsimDfOptions),
+    parquet(SsimParquetOptions),
+    csv(SsimCsvOptions),
 }
 
 #[derive(Args)]
-struct SsimDfOptions {
+struct SsimParquetOptions {
     /// Path of the SSIM File
     #[arg(short, long, required = true)]
     ssim_path: String,
 
     /// FileName / Output path + filename
-    #[arg(short, long, required = true)]
+    #[arg(short, long, default_value = ".")]
     output_path: String,
-
-    /// File Type examples CSV or Parquet
-    #[arg(short, long, default_value = "csv", required = true)]
-    file_type: String,
 
     /// Parquet Compression Options options are  "snappy", "gzip", "lz4", "zstd", or "uncompressed"
     #[arg(short, long, default_value = "snappy", required = true)]
@@ -37,19 +33,44 @@ struct SsimDfOptions {
     /// Batch size for streaming.
     #[arg(short, long, default_value = "10000")]
     batch_size: usize,
+}
 
+#[derive(Args)]
+struct SsimCsvOptions {
+    /// Path of the SSIM File
+    #[arg(short, long, required = true)]
+    ssim_path: String,
+
+    /// FileName / Output path + filename
+    #[arg(short, long, required = true)]
+    output_path: String,
+
+    /// Batch size for streaming.
+    #[arg(short, long, default_value = "10000")]
+    batch_size: usize,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    let Commands::Df(options) = &cli.command;
+    match &cli.command {
+        Commands::parquet(options) => {
+            ssim_to_parquets(
+                &options.ssim_path,
+                Some(options.output_path.as_str()),
+                Some(options.compression.as_str()),
+                Some(options.batch_size),
+            )
+            .expect("Failed to parse SSIM File to Parquet's.");
+        }
 
-    ssim_to_file(
-        &options.ssim_path,
-        &options.output_path,
-        &options.file_type,
-        Some(options.compression.as_str()),
-        Some(options.batch_size),
-    ).expect("Failed to process SSIM file.");
+        Commands::csv(options) => {
+            ssim_to_csv(
+                &options.ssim_path,
+                &options.output_path,
+                Some(options.batch_size),
+            )
+            .expect("Failed to parse SSIM File to CSV.");
+        }
+    }
 }

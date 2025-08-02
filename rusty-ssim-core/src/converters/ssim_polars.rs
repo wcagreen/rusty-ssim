@@ -1,9 +1,6 @@
+use crate::utils::ssim_streaming::{ssim_to_dataframe_streaming, ssim_to_dataframes_streaming};
 use polars::error::PolarsResult;
-use polars::prelude::{col, IntoLazy, JoinArgs, JoinType, cols, DataFrame};
-use crate::utils::ssim_streaming::{ssim_to_dataframes_streaming, ssim_to_dataframe_streaming};
-
-
-
+use polars::prelude::{DataFrame, IntoLazy, JoinArgs, JoinType, col, cols};
 
 /// Combines Flights and Carriers into a single DataFrame based on `airline_designator`.
 ///
@@ -32,8 +29,14 @@ pub(crate) fn combine_carrier_and_flights(
                 .clone()
                 .lazy()
                 .drop(cols(["record_type", "record_serial_number"])),
-            [col("airline_designator"), col("control_duplicate_indicator")],
-            [col("airline_designator"), col("control_duplicate_indicator")],
+            [
+                col("airline_designator"),
+                col("control_duplicate_indicator"),
+            ],
+            [
+                col("airline_designator"),
+                col("control_duplicate_indicator"),
+            ],
             JoinArgs::new(JoinType::Left),
         )
         .collect()?;
@@ -84,7 +87,6 @@ pub(crate) fn combine_flights_and_segments(
     Ok(combined_records)
 }
 
-
 /// Parses an SSIM file into a single DataFrame.
 ///
 /// Automatically chooses between in-memory or streaming mode based on the `streaming` flag.
@@ -101,9 +103,7 @@ pub(crate) fn combine_flights_and_segments(
 /// Returns an error if parsing or merging fails.
 pub fn ssim_to_dataframe(file_path: &str, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
     Ok(ssim_to_dataframe_streaming(file_path, batch_size)?)
-
 }
-
 
 /// Parses an SSIM file into three DataFrames (Carriers, Flights, Segments).
 ///
@@ -119,7 +119,9 @@ pub fn ssim_to_dataframe(file_path: &str, batch_size: Option<usize>) -> PolarsRe
 ///
 /// # Errors
 /// Returns an error if parsing fails.
-pub fn ssim_to_dataframes(file_path: &str,  batch_size: Option<usize>) ->  PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+pub fn ssim_to_dataframes(
+    file_path: &str,
+    batch_size: Option<usize>,
+) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
     Ok(ssim_to_dataframes_streaming(file_path, batch_size)?)
 }
-

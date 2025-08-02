@@ -2,28 +2,41 @@ use polars::prelude::*;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
-pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, ssim_to_file};
+pub use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
 
 #[pyfunction]
-#[pyo3(signature = (file_path, output_path, file_type, compression=None, batch_size=10000))]
-fn parse_ssim_to_file(
+#[pyo3(signature = (file_path, output_path, batch_size=10000))]
+fn parse_ssim_to_csv(
     _py: Python<'_>,
     file_path: &str,
     output_path: &str,
-    file_type: &str,
+    batch_size: Option<usize>,
+) -> PyResult<()> {
+    ssim_to_csv(file_path, output_path, batch_size).map_err(|e| match e {
+        _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to process SSIM file: {}",
+            e
+        )),
+    })?;
+
+    Ok(())
+}
+
+#[pyfunction]
+#[pyo3(signature = (file_path, output_path=".", compression="snappy", batch_size=10000))]
+fn parse_ssim_to_parquets(
+    _py: Python<'_>,
+    file_path: &str,
+    output_path: Option<&str>,
     compression: Option<&str>,
     batch_size: Option<usize>,
 ) -> PyResult<()> {
-    ssim_to_file(file_path, output_path, file_type, compression, batch_size).map_err(
-        |e| {
-            match e {
-                _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
-                    "Failed to process SSIM file: {}",
-                    e
-                )),
-            }
-        },
-    )?;
+    ssim_to_parquets(file_path, output_path, compression, batch_size).map_err(|e| match e {
+        _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to process SSIM file: {}",
+            e
+        )),
+    })?;
 
     Ok(())
 }
@@ -35,9 +48,8 @@ fn split_ssim_to_dataframes(
     file_path: &str,
     batch_size: Option<usize>,
 ) -> PyResult<Py<PyAny>> {
-    let (carrier_df, flights_df, segments_df) =
-        ssim_to_dataframes(file_path, batch_size)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+    let (carrier_df, flights_df, segments_df) = ssim_to_dataframes(file_path, batch_size)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     let polars = py.import("polars")?;
     let io = py.import("io")?;
@@ -90,6 +102,7 @@ fn parse_ssim_to_dataframe(
 fn rustyssim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_ssim_to_dataframe, m)?)?;
     m.add_function(wrap_pyfunction!(split_ssim_to_dataframes, m)?)?;
-    m.add_function(wrap_pyfunction!(parse_ssim_to_file, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_ssim_to_csv, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_ssim_to_parquets, m)?)?;
     Ok(())
 }
