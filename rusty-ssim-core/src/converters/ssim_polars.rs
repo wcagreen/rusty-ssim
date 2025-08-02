@@ -1,8 +1,5 @@
 use polars::error::PolarsResult;
-use polars::prelude::DataFrame;
-use polars::prelude::{col, IntoLazy, JoinArgs, JoinType};
-
-
+use polars::prelude::{col, IntoLazy, JoinArgs, JoinType, cols, DataFrame};
 use crate::utils::ssim_streaming::{ssim_to_dataframes_streaming, ssim_to_dataframe_streaming};
 
 
@@ -29,12 +26,12 @@ pub(crate) fn combine_carrier_and_flights(
     let combined_records = flights
         .clone()
         .lazy()
-        .drop([col("record_type"), col("record_serial_number")])
+        .drop(cols(["record_type", "record_serial_number"]))
         .join(
             carrier
                 .clone()
                 .lazy()
-                .drop([col("record_type"), col("record_serial_number")]),
+                .drop(cols(["record_type", "record_serial_number"])),
             [col("airline_designator"), col("control_duplicate_indicator")],
             [col("airline_designator"), col("control_duplicate_indicator")],
             JoinArgs::new(JoinType::Left),
