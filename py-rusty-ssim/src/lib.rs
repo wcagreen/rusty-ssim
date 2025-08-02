@@ -2,7 +2,7 @@ use polars::prelude::*;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
-pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, stream_ssim_to_file};
+pub use rusty_ssim_core::{ssim_to_dataframe, ssim_to_dataframes, ssim_to_file};
 
 #[pyfunction]
 #[pyo3(signature = (file_path, output_path, file_type, compression=None, batch_size=10000))]
@@ -14,7 +14,7 @@ fn parse_ssim_to_file(
     compression: Option<&str>,
     batch_size: Option<usize>,
 ) -> PyResult<()> {
-    stream_ssim_to_file(file_path, output_path, file_type, compression, batch_size).map_err(
+    ssim_to_file(file_path, output_path, file_type, compression, batch_size).map_err(
         |e| {
             match e {
                 _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(

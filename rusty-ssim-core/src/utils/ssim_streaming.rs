@@ -3,7 +3,6 @@ use std::io::{BufRead, BufReader};
 use polars::prelude::*;
 use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
 use crate::generators::ssim_dataframe::convert_to_dataframes;
-use crate::utils::ssim_exporters::{to_csv, to_parquet};
 use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
 
 const DEFAULT_BATCH_SIZE: usize = 10_000;
@@ -321,85 +320,7 @@ impl StreamingSsimReader {
 
         Ok((final_carrier_df, final_flight_df, final_segment_df))
     }
-
-    /// Process the SSIM file and write the combined DataFrame directly to file
-    fn stream_to_file(&mut self, output_path: &str, file_type: &str, compression: Option<&str>) -> PolarsResult<()> {
-        let mut final_combined_df = DataFrame::empty();
-
-        let mut flight_batch = Vec::new();
-        let mut segment_batch = Vec::new();
-        let mut last_record_type: Option<char> = None;
-
-        loop {
-            match self.read_next_line() {
-                Ok(Some(line)) => {
-                    let record_type = line.chars().nth(0);
-
-                    match record_type {
-                        Some('1') => continue, // Skip header records
-                        Some('2') => {
-                            if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
-                                last_record_type = Some('2');
-                            }
-                        }
-                        Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
-                                flight_batch.push(record);
-                                last_record_type = Some('3');
-                            }
-                        }
-                        Some('4') => {
-                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
-                                segment_batch.push(record);
-                                last_record_type = Some('4');
-                            }
-                        }
-                        Some('5') => {
-                            // Process the final batch with persistent carriers before clearing
-                            if !flight_batch.is_empty() || !segment_batch.is_empty() {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-                                flight_batch.clear();
-                                segment_batch.clear();
-                            }
-
-                            self.persistent_carriers.clear();
-                            last_record_type = Some('5');
-                            continue;
-                        }
-                        _ => continue,
-                    }
-
-                    let current_batch_size = flight_batch.len() + segment_batch.len();
-
-                    match self.should_continue_batch(current_batch_size, last_record_type) {
-                        Ok(should_continue) => {
-                            if !should_continue {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-
-                                flight_batch.clear();
-                                segment_batch.clear();
-                            }
-                        }
-                        Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
-                    }
-                }
-                Ok(None) => break, // EOF
-                Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
-            }
-        }
-
-        // Process any remaining records
-        if !flight_batch.is_empty() || !segment_batch.is_empty() {
-            let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-            final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-        }
-
-        // Write the final combined dataframe to file
-        self.write_dataframe_to_file(final_combined_df, output_path, file_type, compression)
-    }
+    
 
     fn process_batch_with_persistent_carriers(
         &self,
@@ -432,32 +353,7 @@ impl StreamingSsimReader {
 
         Ok(combined_df)
     }
-
-    fn write_dataframe_to_file(
-        &self,
-        mut dataframe: DataFrame,
-        output_path: &str,
-        file_type: &str,
-        compression: Option<&str>,
-    ) -> PolarsResult<()> {
-        match file_type.to_lowercase().as_str() {
-            "csv" => {
-                to_csv(&mut dataframe, output_path)
-                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write CSV: {}", e).into()))?;
-            }
-            "parquet" => {
-                let compression_str = compression.unwrap_or("snappy");
-                to_parquet(&mut dataframe, output_path, compression_str)
-                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write Parquet: {}", e).into()))?;
-            }
-            _ => {
-                return Err(PolarsError::ComputeError(
-                    format!("Unsupported file type: {}", file_type).into()
-                ));
-            }
-        }
-        Ok(())
-    }
+    
 }
 
 fn concatenate_dataframes(mut existing: DataFrame, new: DataFrame) -> PolarsResult<DataFrame> {
@@ -489,16 +385,3 @@ pub fn ssim_to_dataframe_streaming(file_path: &str, batch_size: Option<usize>) -
     reader.process_to_combined_dataframe()
 }
 
-/// Parse SSIM file and write combined DataFrame directly to file using streaming
-pub fn stream_ssim_to_file(
-    file_path: &str,
-    output_path: &str,
-    file_type: &str,
-    compression: Option<&str>,
-    batch_size: Option<usize>,
-) -> PolarsResult<()> {
-    let mut reader = StreamingSsimReader::new(file_path, batch_size)
-        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
-
-    reader.stream_to_file(output_path, file_type, compression)
-}

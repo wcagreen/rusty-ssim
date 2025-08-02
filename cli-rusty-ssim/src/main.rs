@@ -1,4 +1,4 @@
-pub use rusty_ssim_core::stream_ssim_to_file;
+pub use rusty_ssim_core::ssim_to_file;
 
 use clap::{Args, Parser, Subcommand};
 
@@ -45,7 +45,7 @@ fn main() {
 
     let Commands::Df(options) = &cli.command;
 
-    stream_ssim_to_file(
+    ssim_to_file(
         &options.ssim_path,
         &options.output_path,
         &options.file_type,

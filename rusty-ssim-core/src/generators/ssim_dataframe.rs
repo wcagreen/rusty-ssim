@@ -84,7 +84,7 @@ pub fn convert_to_dataframes(
             "aircraft_owner" => flights.iter().map(|r| r.aircraft_owner.as_str()).collect::<Vec<_>>(),
             "cockpit_crew_employer" => flights.iter().map(|r| r.cockpit_crew_employer.as_str()).collect::<Vec<_>>(),
             "cabin_crew_employer" => flights.iter().map(|r| r.cabin_crew_employer.as_str()).collect::<Vec<_>>(),
-            "onward_flight" => flights.iter().map(|r| r.record_serial_number.as_str()).collect::<Vec<_>>(),
+            "onward_flight" => flights.iter().map(|r| r.onward_flight.as_str()).collect::<Vec<_>>(),
             "airline_designator2" => flights.iter().map(|r| r.airline_designator2.as_str()).collect::<Vec<_>>(),
             "flight_number2" => flights.iter().map(|r| r.flight_number2.as_str()).collect::<Vec<_>>(),
             "aircraft_rotation_layover" => flights.iter().map(|r| r.aircraft_rotation_layover.as_str()).collect::<Vec<_>>(),

@@ -10,6 +10,7 @@ description = "Core Library that serves as the backbone for SSIM parser."
 [dependencies]
 polars.workspace = true
 serde.workspace = true
+csv = "1.3.1"
 
 [lib]
 name = "rusty_ssim_core"
