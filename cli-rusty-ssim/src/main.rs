@@ -11,9 +11,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Convert SSIM to Dataframe.
-    parquet(SsimParquetOptions),
-    csv(SsimCsvOptions),
+    /// Parse SSIM file to Parquet(s).
+    Parquet(SsimParquetOptions),
+    /// Parse SSIM file to CSV.
+    Csv(SsimCsvOptions),
 }
 
 #[derive(Args)]
@@ -22,7 +23,7 @@ struct SsimParquetOptions {
     #[arg(short, long, required = true)]
     ssim_path: String,
 
-    /// FileName / Output path + filename
+    /// Output directory path.
     #[arg(short, long, default_value = ".")]
     output_path: String,
 
@@ -41,7 +42,7 @@ struct SsimCsvOptions {
     #[arg(short, long, required = true)]
     ssim_path: String,
 
-    /// FileName / Output path + filename
+    /// Output path / Directory + filename
     #[arg(short, long, required = true)]
     output_path: String,
 
@@ -54,7 +55,7 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::parquet(options) => {
+        Commands::Parquet(options) => {
             ssim_to_parquets(
                 &options.ssim_path,
                 Some(options.output_path.as_str()),
@@ -64,7 +65,7 @@ fn main() {
             .expect("Failed to parse SSIM File to Parquet's.");
         }
 
-        Commands::csv(options) => {
+        Commands::Csv(options) => {
             ssim_to_csv(
                 &options.ssim_path,
                 &options.output_path,
