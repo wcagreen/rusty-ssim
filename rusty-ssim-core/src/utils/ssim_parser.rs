@@ -1,16 +1,23 @@
+pub use crate::records::carrier_record::CarrierRecord;
 pub use crate::records::flight_leg_records::FlightLegRecord;
 pub use crate::records::segment_records::SegmentRecords;
-pub use crate::records::carrier_record::CarrierRecord;
 
-
-pub fn parse_flight_record_legs(line: &str, persistent_carriers: &[CarrierRecord]) -> Option<FlightLegRecord> {
+pub fn parse_flight_record_legs(
+    line: &str,
+    persistent_carriers: &[CarrierRecord],
+) -> Option<FlightLegRecord> {
     let airline_designator = &line[2..5];
-    let control_duplicate_indicator = get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
+    let control_duplicate_indicator =
+        get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
 
     Some(FlightLegRecord {
         flight_designator: format!(
             "{}{}{} {} {}",
-            &line[2..5], &line[5..9], &line[1..2], &line[9..11], &line[127..128]
+            &line[2..5],
+            &line[5..9],
+            &line[1..2],
+            &line[9..11],
+            &line[127..128]
         ),
         operational_suffix: line[1..2].to_string(),
         airline_designator: line[2..5].to_string(),
@@ -61,14 +68,22 @@ pub fn parse_flight_record_legs(line: &str, persistent_carriers: &[CarrierRecord
     })
 }
 
-pub fn parse_segment_record(line: &str, persistent_carriers: &[CarrierRecord]) -> Option<SegmentRecords> {
+pub fn parse_segment_record(
+    line: &str,
+    persistent_carriers: &[CarrierRecord],
+) -> Option<SegmentRecords> {
     let airline_designator = &line[2..5];
-    let control_duplicate_indicator = get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
-    
+    let control_duplicate_indicator =
+        get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
+
     Some(SegmentRecords {
         flight_designator: format!(
             "{}{}{} {} {}",
-            &line[2..5], &line[5..9], &line[1..2], &line[9..11], &line[27..28]
+            &line[2..5],
+            &line[5..9],
+            &line[1..2],
+            &line[9..11],
+            &line[27..28]
         ),
         operational_suffix: line[1..2].to_string(),
         airline_designator: line[2..5].to_string(),
@@ -114,13 +129,13 @@ pub fn parse_carrier_record(line: &str) -> Option<CarrierRecord> {
 /// from the persistent carriers context
 fn get_control_duplicate_indicator_for_airline(
     airline_designator: &str,
-    persistent_carriers: &[CarrierRecord]
+    persistent_carriers: &[CarrierRecord],
 ) -> String {
     for carrier in persistent_carriers {
         if carrier.airline_designator == airline_designator {
             return carrier.control_duplicate_indicator.clone();
         }
     }
-    
+
     String::new()
 }

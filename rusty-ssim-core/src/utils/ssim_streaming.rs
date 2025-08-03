@@ -1,13 +1,13 @@
+use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
+use crate::generators::ssim_dataframe::convert_to_dataframes;
+use crate::utils::ssim_parser::{
+    parse_carrier_record, parse_flight_record_legs, parse_segment_record,
+};
+use polars::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use polars::prelude::*;
-use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
-use crate::generators::ssim_dataframe::convert_to_dataframes;
-use crate::utils::ssim_exporters::{to_csv, to_parquet};
-use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
 
 const DEFAULT_BATCH_SIZE: usize = 10_000;
-
 
 /// Unified streaming SSIM reader that can output to memory or file
 pub struct StreamingSsimReader {
@@ -81,7 +81,11 @@ impl StreamingSsimReader {
         }
     }
 
-    fn should_continue_batch(&mut self, current_batch_size: usize, last_record_type: Option<char>) -> std::io::Result<bool> {
+    fn should_continue_batch(
+        &mut self,
+        current_batch_size: usize,
+        last_record_type: Option<char>,
+    ) -> std::io::Result<bool> {
         // If we haven't reached batch size, continue
         if current_batch_size < self.batch_size {
             return Ok(true);
@@ -148,7 +152,6 @@ impl StreamingSsimReader {
         // For other record types, stop at batch size
         Ok(false)
     }
-    
 
     /// Process an SSIM file and return a single combined DataFrame in memory
     pub fn process_to_combined_dataframe(&mut self) -> PolarsResult<DataFrame> {
@@ -173,13 +176,17 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
+                            if let Some(record) =
+                                parse_flight_record_legs(&line, &self.persistent_carriers)
+                            {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
+                            if let Some(record) =
+                                parse_segment_record(&line, &self.persistent_carriers)
+                            {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
@@ -187,8 +194,12 @@ impl StreamingSsimReader {
                         Some('5') => {
                             // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
+                                let batch_df = self.process_batch_to_combined_dataframe_internal(
+                                    &mut flight_batch,
+                                    &mut segment_batch,
+                                )?;
+                                final_combined_df =
+                                    concatenate_dataframes(final_combined_df, batch_df)?;
                                 flight_batch.clear();
                                 segment_batch.clear();
                             }
@@ -205,24 +216,41 @@ impl StreamingSsimReader {
                     match self.should_continue_batch(current_batch_size, last_record_type) {
                         Ok(should_continue) => {
                             if !should_continue {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
+                                let batch_df = self.process_batch_to_combined_dataframe_internal(
+                                    &mut flight_batch,
+                                    &mut segment_batch,
+                                )?;
+                                final_combined_df =
+                                    concatenate_dataframes(final_combined_df, batch_df)?;
 
                                 flight_batch.clear();
                                 segment_batch.clear();
                             }
                         }
-                        Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+                        Err(e) => {
+                            return Err(PolarsError::IO {
+                                error: Arc::from(e),
+                                msg: None,
+                            });
+                        }
                     }
                 }
                 Ok(None) => break, // EOF
-                Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+                Err(e) => {
+                    return Err(PolarsError::IO {
+                        error: Arc::from(e),
+                        msg: None,
+                    });
+                }
             }
         }
 
         // Process any remaining records
         if !flight_batch.is_empty() || !segment_batch.is_empty() {
-            let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
+            let batch_df = self.process_batch_to_combined_dataframe_internal(
+                &mut flight_batch,
+                &mut segment_batch,
+            )?;
             final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
         }
 
@@ -254,13 +282,17 @@ impl StreamingSsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
+                            if let Some(record) =
+                                parse_flight_record_legs(&line, &self.persistent_carriers)
+                            {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
+                            if let Some(record) =
+                                parse_segment_record(&line, &self.persistent_carriers)
+                            {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
@@ -268,11 +300,18 @@ impl StreamingSsimReader {
                         Some('5') => {
                             // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
-                                let (carrier_df, flight_df, segment_df) = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+                                let (carrier_df, flight_df, segment_df) = self
+                                    .process_batch_with_persistent_carriers(
+                                        &mut flight_batch,
+                                        &mut segment_batch,
+                                    )?;
 
-                                final_carrier_df = concatenate_dataframes(final_carrier_df, carrier_df)?;
-                                final_flight_df = concatenate_dataframes(final_flight_df, flight_df)?;
-                                final_segment_df = concatenate_dataframes(final_segment_df, segment_df)?;
+                                final_carrier_df =
+                                    concatenate_dataframes(final_carrier_df, carrier_df)?;
+                                final_flight_df =
+                                    concatenate_dataframes(final_flight_df, flight_df)?;
+                                final_segment_df =
+                                    concatenate_dataframes(final_segment_df, segment_df)?;
 
                                 flight_batch.clear();
                                 segment_batch.clear();
@@ -290,115 +329,54 @@ impl StreamingSsimReader {
                     match self.should_continue_batch(current_batch_size, last_record_type) {
                         Ok(should_continue) => {
                             if !should_continue {
-                                let (carrier_df, flight_df, segment_df) = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+                                let (carrier_df, flight_df, segment_df) = self
+                                    .process_batch_with_persistent_carriers(
+                                        &mut flight_batch,
+                                        &mut segment_batch,
+                                    )?;
 
-                                final_carrier_df = concatenate_dataframes(final_carrier_df, carrier_df)?;
-                                final_flight_df = concatenate_dataframes(final_flight_df, flight_df)?;
-                                final_segment_df = concatenate_dataframes(final_segment_df, segment_df)?;
+                                final_carrier_df =
+                                    concatenate_dataframes(final_carrier_df, carrier_df)?;
+                                final_flight_df =
+                                    concatenate_dataframes(final_flight_df, flight_df)?;
+                                final_segment_df =
+                                    concatenate_dataframes(final_segment_df, segment_df)?;
 
                                 flight_batch.clear();
                                 segment_batch.clear();
                             }
                         }
-                        Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+                        Err(e) => {
+                            return Err(PolarsError::IO {
+                                error: Arc::from(e),
+                                msg: None,
+                            });
+                        }
                     }
                 }
                 Ok(None) => break, // EOF
-                Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
+                Err(e) => {
+                    return Err(PolarsError::IO {
+                        error: Arc::from(e),
+                        msg: None,
+                    });
+                }
             }
         }
 
         // Process any remaining records
         if !flight_batch.is_empty() || !segment_batch.is_empty() {
-            let (carrier_df, flight_df, segment_df) = self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
+            let (carrier_df, flight_df, segment_df) =
+                self.process_batch_with_persistent_carriers(&mut flight_batch, &mut segment_batch)?;
 
             final_carrier_df = concatenate_dataframes(final_carrier_df, carrier_df)?;
             final_flight_df = concatenate_dataframes(final_flight_df, flight_df)?;
             final_segment_df = concatenate_dataframes(final_segment_df, segment_df)?;
         }
-        
+
         final_carrier_df = final_carrier_df.unique_stable(None, UniqueKeepStrategy::First, None)?;
 
         Ok((final_carrier_df, final_flight_df, final_segment_df))
-    }
-
-    /// Process the SSIM file and write the combined DataFrame directly to file
-    fn stream_to_file(&mut self, output_path: &str, file_type: &str, compression: Option<&str>) -> PolarsResult<()> {
-        let mut final_combined_df = DataFrame::empty();
-
-        let mut flight_batch = Vec::new();
-        let mut segment_batch = Vec::new();
-        let mut last_record_type: Option<char> = None;
-
-        loop {
-            match self.read_next_line() {
-                Ok(Some(line)) => {
-                    let record_type = line.chars().nth(0);
-
-                    match record_type {
-                        Some('1') => continue, // Skip header records
-                        Some('2') => {
-                            if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
-                                last_record_type = Some('2');
-                            }
-                        }
-                        Some('3') => {
-                            if let Some(record) = parse_flight_record_legs(&line,  &self.persistent_carriers) {
-                                flight_batch.push(record);
-                                last_record_type = Some('3');
-                            }
-                        }
-                        Some('4') => {
-                            if let Some(record) = parse_segment_record(&line,  &self.persistent_carriers) {
-                                segment_batch.push(record);
-                                last_record_type = Some('4');
-                            }
-                        }
-                        Some('5') => {
-                            // Process the final batch with persistent carriers before clearing
-                            if !flight_batch.is_empty() || !segment_batch.is_empty() {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-                                flight_batch.clear();
-                                segment_batch.clear();
-                            }
-
-                            self.persistent_carriers.clear();
-                            last_record_type = Some('5');
-                            continue;
-                        }
-                        _ => continue,
-                    }
-
-                    let current_batch_size = flight_batch.len() + segment_batch.len();
-
-                    match self.should_continue_batch(current_batch_size, last_record_type) {
-                        Ok(should_continue) => {
-                            if !should_continue {
-                                let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-                                final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-
-                                flight_batch.clear();
-                                segment_batch.clear();
-                            }
-                        }
-                        Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
-                    }
-                }
-                Ok(None) => break, // EOF
-                Err(e) => return Err(PolarsError::IO { error: Arc::from(e), msg: None }),
-            }
-        }
-
-        // Process any remaining records
-        if !flight_batch.is_empty() || !segment_batch.is_empty() {
-            let batch_df = self.process_batch_to_combined_dataframe_internal(&mut flight_batch, &mut segment_batch)?;
-            final_combined_df = concatenate_dataframes(final_combined_df, batch_df)?;
-        }
-
-        // Write the final combined dataframe to file
-        self.write_dataframe_to_file(final_combined_df, output_path, file_type, compression)
     }
 
     fn process_batch_with_persistent_carriers(
@@ -422,7 +400,8 @@ impl StreamingSsimReader {
         flight_batch: &mut Vec<crate::records::flight_leg_records::FlightLegRecord>,
         segment_batch: &mut Vec<crate::records::segment_records::SegmentRecords>,
     ) -> PolarsResult<DataFrame> {
-        let (carrier_df, flight_df, segment_df) = self.process_batch_with_persistent_carriers(flight_batch, segment_batch)?;
+        let (carrier_df, flight_df, segment_df) =
+            self.process_batch_with_persistent_carriers(flight_batch, segment_batch)?;
 
         // Combine carrier and flights
         let mut combined_df = combine_carrier_and_flights(carrier_df, flight_df)?;
@@ -431,32 +410,6 @@ impl StreamingSsimReader {
         combined_df = combine_flights_and_segments(combined_df, segment_df)?;
 
         Ok(combined_df)
-    }
-
-    fn write_dataframe_to_file(
-        &self,
-        mut dataframe: DataFrame,
-        output_path: &str,
-        file_type: &str,
-        compression: Option<&str>,
-    ) -> PolarsResult<()> {
-        match file_type.to_lowercase().as_str() {
-            "csv" => {
-                to_csv(&mut dataframe, output_path)
-                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write CSV: {}", e).into()))?;
-            }
-            "parquet" => {
-                let compression_str = compression.unwrap_or("snappy");
-                to_parquet(&mut dataframe, output_path, compression_str)
-                    .map_err(|e| PolarsError::ComputeError(format!("Failed to write Parquet: {}", e).into()))?;
-            }
-            _ => {
-                return Err(PolarsError::ComputeError(
-                    format!("Unsupported file type: {}", file_type).into()
-                ));
-            }
-        }
-        Ok(())
     }
 }
 
@@ -474,31 +427,29 @@ fn concatenate_dataframes(mut existing: DataFrame, new: DataFrame) -> PolarsResu
 // Public API functions for backward compatibility
 
 /// Parse SSIM file into three separate DataFrames using streaming
-pub fn ssim_to_dataframes_streaming(file_path: &str, batch_size: Option<usize>) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-    let mut reader = StreamingSsimReader::new(file_path, batch_size)
-        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
+pub fn ssim_to_dataframes_streaming(
+    file_path: &str,
+    batch_size: Option<usize>,
+) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+    let mut reader =
+        StreamingSsimReader::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+            error: Arc::from(e),
+            msg: None,
+        })?;
 
     reader.process_to_dataframes()
 }
 
 /// Parse SSIM file into a single combined DataFrame using streaming
-pub fn ssim_to_dataframe_streaming(file_path: &str, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
-    let mut reader = StreamingSsimReader::new(file_path, batch_size)
-        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
+pub fn ssim_to_dataframe_streaming(
+    file_path: &str,
+    batch_size: Option<usize>,
+) -> PolarsResult<DataFrame> {
+    let mut reader =
+        StreamingSsimReader::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+            error: Arc::from(e),
+            msg: None,
+        })?;
 
     reader.process_to_combined_dataframe()
-}
-
-/// Parse SSIM file and write combined DataFrame directly to file using streaming
-pub fn stream_ssim_to_file(
-    file_path: &str,
-    output_path: &str,
-    file_type: &str,
-    compression: Option<&str>,
-    batch_size: Option<usize>,
-) -> PolarsResult<()> {
-    let mut reader = StreamingSsimReader::new(file_path, batch_size)
-        .map_err(|e| PolarsError::IO { error: Arc::from(e), msg: None })?;
-
-    reader.stream_to_file(output_path, file_type, compression)
 }

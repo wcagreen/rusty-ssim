@@ -1,6 +1,6 @@
-use serde::Serialize;
 use crate::records::flight_leg_records::FlightLegRecord;
 use crate::records::segment_records::SegmentRecords;
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct FlightSegment {
