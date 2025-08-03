@@ -40,3 +40,7 @@ Cargo.lock
 /dataSources.local.xml
 
 .venv
+
+*.pyd
+__pycache__
+*.pyc

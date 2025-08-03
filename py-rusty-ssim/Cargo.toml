@@ -8,10 +8,13 @@ repository.workspace = true
 description = "SSIM parser rust for python."
 
 [dependencies]
-pyo3 = { version = "0.25.1", features = [ "extension-module", "multiple-pymethods"] }
+pyo3 = { version = "0.25.1", features = ["abi3-py39", "extension-module", "multiple-pymethods"] }
 polars.workspace = true
 rusty-ssim-core.workspace = true
 
 [lib]
-name = "rusty_ssim"
+name = "rustyssim"
 crate-type = ["cdylib"]
+
+[package.metadata.maturin]
+module-name = "rustyssim.rustyssim"

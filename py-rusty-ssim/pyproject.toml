@@ -10,11 +10,15 @@ authors = [
     { name = "William Green", email = "" },
 ]
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
     "polars >= 1.31.0",
+    "pyarrow >= 21.0.0",
 ]
 dynamic = ["version"]
 
 [project.urls]
 Repository = "https://github.com/wcagreen/rusty-ssim"
+
+[tool.maturin]
+include = ["rusty_ssim/*.pyi", "rusty_ssim/py.typed"]

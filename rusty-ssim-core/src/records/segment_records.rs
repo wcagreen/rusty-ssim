@@ -5,6 +5,7 @@ pub struct SegmentRecords {
     pub flight_designator: String,
     pub operational_suffix: String,
     pub airline_designator: String,
+    pub control_duplicate_indicator: String,
     pub flight_number: String,
     pub itinerary_variation_identifier: String,
     pub leg_sequence_number: String,
