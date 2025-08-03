@@ -5,9 +5,7 @@ use crate::utils::ssim_parser::{
     parse_carrier_record, parse_flight_record_legs, parse_segment_record,
 };
 use polars::prelude::*;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io;
+use std::fs::{File, OpenOptions, create_dir_all};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
@@ -137,6 +135,11 @@ impl EnhancedStreamingSsimWriter {
 
     /// Initialize CSV writer for incremental writing
     fn init_csv_writer(&mut self, output_path: &str) -> PolarsResult<()> {
+        Self::ensure_directory_exists(output_path).map_err(|e| PolarsError::IO {
+            error: Arc::from(e),
+            msg: Some("Failed to create directory for CSV Output".into()),
+        })?;
+
         // Check if file already exists
         let file_exists = Path::new(output_path).exists();
 
@@ -145,7 +148,10 @@ impl EnhancedStreamingSsimWriter {
             .create(true)
             .append(true)
             .open(output_path)
-            .expect(&format!("Unable to open file {}", output_path));
+            .map_err(|e| PolarsError::IO {
+                error: Arc::from(e),
+                msg: Some(format!("Unable to open file {}", output_path).into()),
+            })?;
 
         let writer = csv::WriterBuilder::new()
             .has_headers(false) // We'll control headers ourselves
@@ -232,27 +238,49 @@ impl EnhancedStreamingSsimWriter {
         Ok(())
     }
 
-    fn fetch_output_path(&mut self, output_path: &str) -> Result<PathBuf, io::Error> {
+    fn ensure_directory_exists(file_path: &str) -> std::io::Result<()> {
+        let path = Path::new(file_path);
+
+        if let Some(parent_directory) = path.parent() {
+            if !parent_directory.exists() {
+                create_dir_all(parent_directory)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn fetch_output_path(&mut self, output_path: &str) -> PolarsResult<PathBuf> {
         let path = Path::new(output_path);
 
         if path.extension().is_some() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "The output path should be a directory, not a file.",
-            ));
+            return Err(PolarsError::IO {
+                error: Arc::from(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "The output path should be a directory, not a file.",
+                )),
+                msg: None,
+            });
         }
 
-        // Ensure directory exists or can be created
-        if path.exists() && !path.is_dir() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Output path exists but is not a directory.",
-            ));
+        if !path.exists() {
+            create_dir_all(path).map_err(|e| PolarsError::IO {
+                error: Arc::from(e),
+                msg: Some(format!("Failed to create directory: {}", output_path).into()),
+            })?;
+        } else if !path.is_dir() {
+            return Err(PolarsError::IO {
+                error: Arc::from(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Output path exists but is not a directory.",
+                )),
+                msg: None,
+            });
         }
 
         // Build final file path
         let carrier_name = self.get_carrier_filename();
-        let file_name = format!("{}_{}.parquet", "ssim", carrier_name); // adjust prefix as needed
+        let file_name = format!("{}_{}.parquet", "ssim", carrier_name);
         let carrier_file_path = path.join(file_name);
 
         Ok(carrier_file_path)

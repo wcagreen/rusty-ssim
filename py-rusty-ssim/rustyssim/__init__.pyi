@@ -41,11 +41,9 @@ def parse_ssim_to_dataframe(
     """
     ...
 
-def parse_ssim_to_file(
+def parse_ssim_to_csv(
         file_path: str,
         output_path: str,
-        file_type: str,
-        compression: Optional[str] = None,
         batch_size: int = 10000,
 ) -> None:
     """
@@ -54,7 +52,29 @@ def parse_ssim_to_file(
     Args:
         file_path (str): Path to the SSIM file.
         output_path (str): Output Path for the ssim file.
-        file_type (str): Output file type either csv or parquet.
+        batch_size (int, optional): Batch size for streaming. Defaults to 10000.
+
+    Returns:
+        None: File is written to disk.
+
+    Example:
+        >>> parse_ssim_to_csv("path/to/ssim_file.ssim", "output/path/output_file.csv")
+        >>> parse_ssim_to_csv("path/to/ssim_file.ssim", "output/path/output_file.csv", 5000)
+    """
+    ...
+
+def parse_ssim_to_parquets(
+        file_path: str,
+        output_path: Optional[str] = ".",
+        compression: Optional[str] = "snappy",
+        batch_size: int = 10000,
+) -> None:
+    """
+    Parse SSIM file and write contents to parquet files.
+
+    Args:
+        file_path (str): Path to the SSIM file.
+        output_path (str): Output Path for the parquet files. Default to root directory.
         compression (str, optional): Parquet Compression Options are "snappy", "gzip", "lz4", "zstd", or "uncompressed".
                                    Defaults to "snappy" for parquet files, ignored for CSV.
         batch_size (int, optional): Batch size for streaming. Defaults to 10000.
@@ -63,8 +83,8 @@ def parse_ssim_to_file(
         None: File is written to disk.
 
     Example:
-        >>> parse_ssim_to_file("path/to/ssim_file.ssim", "output/path/output_file.parquet", "parquet")
-        >>> parse_ssim_to_file("path/to/ssim_file.ssim", "output/path/output_file.csv", "csv")
-        >>> parse_ssim_to_file("path/to/ssim_file.ssim", "output/path/output_file.parquet", "parquet", "zstd", 5000)
+        >>> parse_ssim_to_parquets("path/to/ssim_file.ssim")
+        >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", "./output_path")
+        >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", "./output_path", "zstd", 5000)
     """
     ...
