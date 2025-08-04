@@ -225,7 +225,7 @@ impl EnhancedStreamingSsimWriter {
         }
 
         // TODO Probably should adjust code, but don't know yet.
-        let compression_str = compression.unwrap_or("snappy");
+        let compression_str = compression.unwrap_or("uncompressed");
         let carrier_file_path = self.fetch_output_path(output_path, compression_str);
 
 
@@ -251,9 +251,7 @@ impl EnhancedStreamingSsimWriter {
 
         Ok(())
     }
-
-    /// TODO Add logic to make the output parquet files compression more noticeable.
-
+    
     fn build_filename(&self, compression: &str) -> Result<String, String> {
         let carrier_name = self.get_carrier_filename();
 

@@ -27,8 +27,8 @@ struct SsimParquetOptions {
     #[arg(short, long, default_value = ".")]
     output_path: String,
 
-    /// Parquet Compression Options options are  "snappy", "gzip", "lz4", "zstd", or "uncompressed"
-    #[arg(short, long, default_value = "snappy")]
+    /// Parquet Compression Options options are  "snappy", "gzip", "lz4", "zstd", "uncompressed", "brotli", and "lzo"
+    #[arg(short, long, default_value = "uncompressed")]
     compression: String,
 
     /// Batch size for streaming.

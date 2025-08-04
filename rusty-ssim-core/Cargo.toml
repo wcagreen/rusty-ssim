@@ -17,4 +17,4 @@ name = "rusty_ssim_core"
 crate-type = ["rlib"]
 
 [dev-dependencies]
-tempfile = { version = "3.8" }
+tempfile = { version = "3.20.0" }

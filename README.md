@@ -93,8 +93,8 @@ ssim csv -s ./data/schedule.ssim -o ./output/parsed_schedule.csv -b 5000
 **Options:**
 - `--ssim-path, -s`: Path to the SSIM file (required)
 - `--output-path, -o`: Output directory path (default: current directory)
-- `--compression, -c`: Compression type (default: "snappy")
-    - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`
+- `--compression, -c`: Compression type (default: "uncompressed")
+    - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - `--batch-size, -b`: Batch size for streaming (default: 10000)
 
 **Example:**
@@ -221,7 +221,7 @@ Parse an SSIM file and write to separate Parquet files (one per carrier).
 def parse_ssim_to_parquets(
     file_path: str,
     output_path: str = ".",
-    compression: str = "snappy",
+    compression: str = "uncompressed",
     batch_size: int = 10000
 ) -> None
 ```
@@ -229,8 +229,8 @@ def parse_ssim_to_parquets(
 **Parameters:**
 - `file_path` (str): Path to the SSIM file
 - `output_path` (str, optional): Directory path. Default: current directory
-- `compression` (str, optional): Parquet compression algorithm. Default: "snappy"
-    - Available options: `"snappy"`, `"gzip"`, `"lz4"`, `"zstd"`, `"uncompressed"`
+- `compression` (str, optional): Parquet compression algorithm. Default: "uncompressed"
+  - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - `batch_size` (int, optional): Batch size for streaming processing. Default: 10000
 
 
