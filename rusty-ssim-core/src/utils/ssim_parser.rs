@@ -12,8 +12,9 @@ pub fn parse_flight_record_legs(
 
     Some(FlightLegRecord {
         flight_designator: format!(
-            "{}{}{} {} {}",
+            "{}_{}{}{} {} {}",
             &line[2..5],
+            control_duplicate_indicator,
             &line[5..9],
             &line[1..2],
             &line[9..11],
@@ -78,12 +79,13 @@ pub fn parse_segment_record(
 
     Some(SegmentRecords {
         flight_designator: format!(
-            "{}{}{} {} {}",
+            "{}_{}{}{} {} {}",
             &line[2..5],
+            control_duplicate_indicator,
             &line[5..9],
             &line[1..2],
             &line[9..11],
-            &line[27..28]
+            &line[127..128]
         ),
         operational_suffix: line[1..2].to_string(),
         airline_designator: line[2..5].to_string(),
