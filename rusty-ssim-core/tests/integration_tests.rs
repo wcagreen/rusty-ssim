@@ -139,7 +139,6 @@ mod integration_tests {
             result.err()
         );
 
-        // Check that the file was created and has content
         assert!(output_path.exists(), "Output CSV file should exist");
         let file_content = fs::read_to_string(output_path).expect("Failed to read output file");
         assert!(!file_content.is_empty(), "CSV file should not be empty");
@@ -224,14 +223,12 @@ mod integration_tests {
                     "Empty file resulted in DataFrame with shape: {:?}",
                     df.shape()
                 );
-                // Could assert that it's empty or has certain structure
             }
             Err(e) => {
                 println!(
                     "Empty file resulted in error (which might be expected): {:?}",
                     e
                 );
-                // If you expect this to fail, you can assert it's an error
             }
         }
     }
@@ -245,7 +242,7 @@ mod integration_tests {
             println!("Expected error for nonexistent file: {:?}", e);
         }
     }
-    
+
     #[test]
     fn test_different_batch_sizes() {
         let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
@@ -340,7 +337,7 @@ mod performance_tests {
         let df = result.unwrap();
         println!("Large file processing time: {:?}", duration);
         println!("Large file DataFrame shape: {:?}", df.shape());
-        
+
         assert!(
             duration.as_secs() < 10,
             "Processing should complete within 10 seconds"
