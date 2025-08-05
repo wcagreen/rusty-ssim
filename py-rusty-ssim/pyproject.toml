@@ -19,7 +19,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.1"
+    "pytest>=8.4.1",
+    "pytest-benchmark>=5.1.0"
 ]
 
 dynamic = ["version"]
