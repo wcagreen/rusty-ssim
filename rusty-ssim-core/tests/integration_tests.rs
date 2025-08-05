@@ -287,6 +287,12 @@ mod integration_tests {
                 result.err()
             );
 
+
+            let expected_ext = match compression {
+                "gzip" => "gz",
+                _ => "parquet",
+            };
+
             // Check that files were created
             let entries = fs::read_dir(temp_dir.path()).expect("Failed to read output directory");
             let parquet_count = entries
@@ -296,7 +302,7 @@ mod integration_tests {
                         .path()
                         .extension()
                         .and_then(|ext| ext.to_str())
-                        .map_or(false, |ext| ext == "parquet")
+                        .map_or(false, |ext| ext == expected_ext)
                 })
                 .count();
 

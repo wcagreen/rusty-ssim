@@ -382,6 +382,11 @@ mod cli_tests {
                 panic!("CLI command failed with compression {}: {}", compression, stderr);
             }
 
+            let expected_ext = match compression {
+                "gzip" => "gz",
+                _ => "parquet",
+            };
+
             // Check that files were created
             let entries = fs::read_dir(temp_dir.path()).expect("Failed to read output directory");
             let parquet_count = entries
@@ -389,7 +394,7 @@ mod cli_tests {
                 .filter(|entry| {
                     entry.path().extension()
                         .and_then(|ext| ext.to_str())
-                        .map_or(false, |ext| ext == "parquet")
+                        .map_or(false, |ext| ext == expected_ext)
                 })
                 .count();
 
