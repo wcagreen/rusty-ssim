@@ -257,7 +257,7 @@ impl EnhancedStreamingSsimWriter {
 
         let filename = match compression {
             "uncompressed" => format!("ssim_{}.parquet", carrier_name),
-            "gzip" => format!("ssim_{}.gzip.parquet", carrier_name),
+            "gzip" => format!("ssim_{}.parquet.gz", carrier_name),
             compression_type => match compression_type {
                 "snappy" | "lz4" | "zstd" | "brotli" | "lzo" => {
                     format!("ssim_{}.{}.parquet", carrier_name, compression_type)

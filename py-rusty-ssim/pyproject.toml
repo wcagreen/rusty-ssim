@@ -11,10 +11,17 @@ authors = [
 ]
 license = "MIT"
 requires-python = ">=3.9"
+
 dependencies = [
     "polars >= 1.31.0",
     "pyarrow >= 21.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1"
+]
+
 dynamic = ["version"]
 
 [project.urls]
@@ -22,3 +29,6 @@ Repository = "https://github.com/wcagreen/rusty-ssim"
 
 [tool.maturin]
 include = ["rusty_ssim/*.pyi", "rusty_ssim/py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
