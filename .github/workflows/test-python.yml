@@ -83,4 +83,4 @@ jobs:
 
       - name: Run tests
         if: github.ref_name != 'main' && matrix.python-version != '3.13t'
-        run: pytest -n auto -m "not release and not benchmark and not docs"
+        run: pytest
