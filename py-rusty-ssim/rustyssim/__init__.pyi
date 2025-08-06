@@ -66,7 +66,7 @@ def parse_ssim_to_csv(
 def parse_ssim_to_parquets(
         file_path: str,
         output_path: Optional[str] = ".",
-        compression: Optional[str] = "snappy",
+        compression: Optional[str] = "uncompressed",
         batch_size: int = 10000,
 ) -> None:
     """
@@ -76,7 +76,7 @@ def parse_ssim_to_parquets(
         file_path (str): Path to the SSIM file.
         output_path (str): Output Path for the parquet files. Default to root directory.
         compression (str, optional): Parquet Compression Options are "snappy", "gzip", "lz4", "zstd", or "uncompressed".
-                                   Defaults to "snappy" for parquet files, ignored for CSV.
+                                   Defaults to "uncompressed" for parquet files, ignored for CSV.
         batch_size (int, optional): Batch size for streaming. Defaults to 10000.
 
     Returns:

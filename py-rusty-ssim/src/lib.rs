@@ -23,7 +23,7 @@ fn parse_ssim_to_csv(
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, output_path=".", compression="snappy", batch_size=10000))]
+#[pyo3(signature = (file_path, output_path=".", compression="uncompressed", batch_size=10000))]
 fn parse_ssim_to_parquets(
     _py: Python<'_>,
     file_path: &str,

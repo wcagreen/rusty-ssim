@@ -1,0 +1,48 @@
+name: Test CLI
+
+on:
+  pull_request:
+    paths:
+      - cli-rusty-ssim/**
+      - Cargo.toml
+      - .github/workflows/test-cli.yml
+  push:
+    branches:
+      - main
+    paths:
+      - cli-rusty-ssim/**
+      - Cargo.toml
+      - .github/workflows/test-cli.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUSTFLAGS: -C debuginfo=0  # Do not produce debug symbols to keep memory usage down
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref_name == 'main' }}
+
+      - name: Run tests
+        if: github.ref_name != 'main'
+        run: >
+          cargo test -p cli-rusty-ssim --test cli_tests
+

@@ -93,8 +93,8 @@ ssim csv -s ./data/schedule.ssim -o ./output/parsed_schedule.csv -b 5000
 **Options:**
 - `--ssim-path, -s`: Path to the SSIM file (required)
 - `--output-path, -o`: Output directory path (default: current directory)
-- `--compression, -c`: Compression type (default: "snappy")
-    - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`
+- `--compression, -c`: Compression type (default: "uncompressed")
+    - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - `--batch-size, -b`: Batch size for streaming (default: 10000)
 
 **Example:**
@@ -120,7 +120,7 @@ Parse an SSIM file into a single Polars DataFrame containing record type 2, 3, a
 def parse_ssim_to_dataframe(
     file_path: str,
     batch_size: int = 10000
-) -> pl.DataFrame
+) -> pl.DataFrame:
 ```
 
 **Parameters:**
@@ -209,7 +209,7 @@ rs.parse_ssim_to_csv(
 rs.parse_ssim_to_csv(
     file_path="./data/large_schedule.ssim",
     output_path="./output/large_schedule.csv",
-    batch_size=5000
+    batch_size=100000
 )
 ```
 
@@ -221,7 +221,7 @@ Parse an SSIM file and write to separate Parquet files (one per carrier).
 def parse_ssim_to_parquets(
     file_path: str,
     output_path: str = ".",
-    compression: str = "snappy",
+    compression: str = "uncompressed",
     batch_size: int = 10000
 ) -> None
 ```
@@ -229,8 +229,8 @@ def parse_ssim_to_parquets(
 **Parameters:**
 - `file_path` (str): Path to the SSIM file
 - `output_path` (str, optional): Directory path. Default: current directory
-- `compression` (str, optional): Parquet compression algorithm. Default: "snappy"
-    - Available options: `"snappy"`, `"gzip"`, `"lz4"`, `"zstd"`, `"uncompressed"`
+- `compression` (str, optional): Parquet compression algorithm. Default: "uncompressed"
+  - Available options: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - `batch_size` (int, optional): Batch size for streaming processing. Default: 10000
 
 
@@ -253,7 +253,7 @@ rs.parse_ssim_to_parquets(
     file_path="./data/very_large_schedule.ssim",
     output_path="./output",
     compression="lz4",
-    batch_size=2000
+    batch_size=20000
 )
 ```
 

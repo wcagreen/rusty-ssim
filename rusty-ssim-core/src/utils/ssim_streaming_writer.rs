@@ -224,9 +224,11 @@ impl EnhancedStreamingSsimWriter {
             return Ok(());
         }
 
-        let carrier_file_path = self.fetch_output_path(output_path);
+        // TODO Probably should adjust code, but don't know yet.
+        let compression_str = compression.unwrap_or("uncompressed");
+        let carrier_file_path = self.fetch_output_path(output_path, compression_str);
 
-        let compression_str = compression.unwrap_or("snappy");
+
         to_parquet(
             &mut carrier_df,
             carrier_file_path?.to_str().unwrap(),
@@ -249,8 +251,25 @@ impl EnhancedStreamingSsimWriter {
 
         Ok(())
     }
+    
+    fn build_filename(&self, compression: &str) -> Result<String, String> {
+        let carrier_name = self.get_carrier_filename();
 
-    fn fetch_output_path(&mut self, output_path: &str) -> PolarsResult<PathBuf> {
+        let filename = match compression {
+            "uncompressed" => format!("ssim_{}.parquet", carrier_name),
+            "gzip" => format!("ssim_{}.parquet.gz", carrier_name),
+            compression_type => match compression_type {
+                "snappy" | "lz4" | "zstd" | "brotli" | "lzo" => {
+                    format!("ssim_{}.{}.parquet", carrier_name, compression_type)
+                }
+                _ => return Err(format!("Unsupported compression: {}", compression_type)),
+            },
+        };
+
+        Ok(filename)
+    }
+
+    fn fetch_output_path(&mut self, output_path: &str, compression: &str) -> PolarsResult<PathBuf> {
         let path = Path::new(output_path);
 
         if path.extension().is_some() {
@@ -278,9 +297,12 @@ impl EnhancedStreamingSsimWriter {
             });
         }
 
-        // Build final file path
-        let carrier_name = self.get_carrier_filename();
-        let file_name = format!("{}_{}.parquet", "ssim", carrier_name);
+        let file_name = match self.build_filename(compression) {
+            Ok(name) => name,
+            Err(e) => {
+                panic!("Invalid compression '{}': {}", compression, e);
+            }
+        };
         let carrier_file_path = path.join(file_name);
 
         Ok(carrier_file_path)
