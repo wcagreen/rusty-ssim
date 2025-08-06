@@ -1,61 +1,115 @@
+use polars::prelude::*;
+use polars_testing::assert_dataframe_equal;
+use polars_testing::asserts::DataFrameEqualOptions;
 use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
 use std::fs;
-use std::io::Write;
-use tempfile::{NamedTempFile, TempDir};
+use tempfile::TempDir;
 
-pub const SAMPLE_SSIM_DATA: &str = r#"1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-2UXX  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-3 XX   120102P28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003
-3 XX   130101J02APR1805APR18   4    AMS05200520+0200  GRQ06000600+0200  73HY                                                                                                Y189VV738H189         000004
-4 XX   130101J              AB050AMSGRQKL 2562                                                                                                                                                    000006
-4 XX   130101J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006
-3AXX  1230501J01APR1820APR18    5   AMS04350435+0200  LJU06200620+0200  73HY                                                             XZ  123                            Y189VV738H189         000005
-4AXX  1230501J             1AB010AMSLJUKL 2561                                                                                                                                                    000006
-3 XX 12340601J01APR1827APR18   4  7 AMS04350435+0200  LJU06200620+0200  73WY                                                             YY  123                            Y149VV73W             000007
-4 XX 12340601J              AB010AMSLJUKL 2561                                                                                                                                                    000008
-3XXX 12340301J22SEP1825OCT18     6  AMS11451145+0200  SID18301830-0100  73HY                                                             XY 1234                            Y189VV738H189         000009
-3XXX 12340401J01OCT1826OCT18 2      AMS05550555+0200  BVC12451245-0100  73HY                                                                                                Y189VV738H            000010
-3 XX 00770101P28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                                                                Y189VV738H189         000003
-3 XX 77770101J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                                                                Y189VV738H189         000003
-3 XX 77770102J28MAR1803APR18 2      AMS05100510+0000  ORD08000800+0200  73HY                                                                                                Y189VV738H189         000003
-3 XX 77770103J28MAR1803APR18 2      ORD05100510+0000  ATL08000800+0200  73HY                                                                                                Y189VV738H189         000003
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-5 XX                                                                                                                                                                                       000011E000012
-"#;
+fn ssim_file_generator(flights_count: i16, ivi_count: i8) -> String {
+    let mut lines = vec![
+        "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001".to_string(),
+    ];
+    lines.push("2UXX  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002".to_string());
+    for flight_idx in 0..flights_count {
+        let flight_number = format!("{:04}", 1000 + flight_idx);
+        for ivi in 0..ivi_count {
+            let padded_ivi = format!("{:02}", ivi);
+            let leg = "01";
+            lines.push(format!(
+                "3 XX {flight}{ivi_info}{leg_info}J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003",
+                flight = flight_number,
+                ivi_info = padded_ivi,
+                leg_info = leg
+            ));
 
-pub const MINIMAL_SSIM_DATA: &str = r#"1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-2UXX  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-3 XX   120102P28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-5 XX                                                                                                                                                                                       000011E000012
-"#;
+            lines.push(format!(
+                "4 XX {flight}{ivi_info}{leg_info}J              AB050AMSGRQKL 2562                                                                                                                                                    000006",
+                flight = flight_number,
+                ivi_info = padded_ivi,
+                leg_info = leg
+            ));
 
-pub const EMPTY_SSIM_DATA: &str = "";
+            lines.push(format!(
+                "4 XX {flight}{ivi_info}{leg_info}J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006",
+                flight = flight_number,
+                ivi_info = padded_ivi,
+                leg_info = leg
+            ));
+        }
+    }
 
-fn create_temp_ssim_file(content: &str) -> NamedTempFile {
-    let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-    temp_file
-        .write_all(content.as_bytes())
-        .expect("Failed to write to temp file");
-    temp_file
+    lines.push(String::from("5 XX                                                                                                                                                                                       000011E000012"));
+
+    lines.join("\n")
+}
+
+fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> String {
+    let mut lines = vec![
+        "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001".to_string(),
+    ];
+
+    let carriers = ["XX ", "YY ", "ZZ "];
+
+    for carrier in &carriers {
+        lines.push(format!("2U{carrier_code}  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002",
+                           carrier_code=carrier
+        ));
+
+        for flight_idx in 0..flights_count {
+            let flight_number = format!("{:04}", 1000 + flight_idx);
+            for ivi in 0..ivi_count {
+                let padded_ivi = format!("{:02}", ivi);
+                let leg = "01";
+                lines.push(format!(
+                    "3 {carrier_code} {flight}{ivi_info}{leg_info}J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003",
+                    carrier_code=carrier,
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg
+                ));
+
+                lines.push(format!(
+                    "4 {carrier_code} {flight}{ivi_info}{leg_info}J              AB050AMSGRQKL 2562                                                                                                                                                    000006",
+                    carrier_code=carrier,
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg
+                ));
+
+                lines.push(format!(
+                    "4 {carrier_code} {flight}{ivi_info}{leg_info}J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006",
+                    carrier_code=carrier,
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg
+                ));
+            }
+        }
+
+        lines.push(format!("5 {carrier_code}                                                                                                                                                                                       000011E000012",
+                           carrier_code=carrier));
+    }
+    lines.join("\n")
+}
+
+fn create_temp_multi_ssim_file(flights_count: i16, ivi_count: i8) -> (String, TempDir) {
+    let content = multi_carrier_ssim_file_generator(flights_count, ivi_count);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let file_path = temp_dir.path().join("test.ssim");
+
+    fs::write(&file_path, content).expect("Failed to write SSIM file");
+
+    (file_path.to_string_lossy().to_string(), temp_dir)
+}
+
+fn create_temp_ssim_file(flights_count: i16, ivi_count: i8) -> (String, TempDir) {
+    let content = ssim_file_generator(flights_count, ivi_count);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let file_path = temp_dir.path().join("test.ssim");
+
+    fs::write(&file_path, content).expect("Failed to write SSIM file");
+
+    (file_path.to_string_lossy().to_string(), temp_dir)
 }
 
 #[cfg(test)]
@@ -64,10 +118,9 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_dataframe_success() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2);
 
-        let result = ssim_to_dataframe(file_path, Some(1000));
+        let result = ssim_to_dataframe(&file_path, Some(10000));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrame: {:?}",
@@ -87,10 +140,9 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_dataframes_success() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2);
 
-        let result = ssim_to_dataframes(file_path, Some(1000));
+        let result = ssim_to_dataframes(&file_path, Some(1000));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrames: {:?}",
@@ -113,26 +165,62 @@ mod integration_tests {
             "Flights DataFrame should not be empty"
         );
         assert_eq!(flights_df.get_column_names().len(), 47);
-        assert_eq!(flights_df.height(), 10);
+        assert_eq!(flights_df.height(), 20);
 
         assert!(
             !segments_df.is_empty(),
             "For this test, segments should not be empty"
         );
         assert_eq!(segments_df.get_column_names().len(), 16);
-        assert_eq!(segments_df.height(), 4);
+        assert_eq!(segments_df.height(), 40);
+    }
+
+    #[test]
+    fn test_multi_carrier_ssim_to_dataframe_success() {
+        let (file_path, _temp_dir) = create_temp_multi_ssim_file(10, 2);
+
+        let result = ssim_to_dataframe(&file_path, Some(10000));
+        assert!(
+            result.is_ok(),
+            "Failed to parse SSIM to DataFrame: {:?}",
+            result.err()
+        );
+
+        let df = result.unwrap();
+        assert!(!df.is_empty(), "DataFrame should not be empty");
+
+        let unique_carriers = df
+            .clone()
+            .lazy()
+            .select([
+                col("airline_designator"),
+                col("control_duplicate_indicator"),
+            ])
+            .unique(None, UniqueKeepStrategy::First)
+            .collect();
+
+        let options = DataFrameEqualOptions::default().with_check_row_order(false);
+
+        let expected_carriers = df! {
+            "airline_designator" => ["XX ", "YY ", "ZZ "],
+            "control_duplicate_indicator" => [" ", " ", " "]
+        };
+
+        assert_dataframe_equal!(
+            &unique_carriers.unwrap(),
+            &expected_carriers.unwrap(),
+            options
+        );
     }
 
     #[test]
     fn test_ssim_to_csv_success() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, temp_dir) = create_temp_ssim_file(10, 2);
 
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let output_path = temp_dir.path().join("output.csv");
         let output_path_str = output_path.to_str().unwrap();
 
-        let result = ssim_to_csv(file_path, output_path_str, Some(1000));
+        let result = ssim_to_csv(&file_path, output_path_str, Some(1000));
         assert!(
             result.is_ok(),
             "Failed to write SSIM to CSV: {:?}",
@@ -152,13 +240,11 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_parquets_success() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, temp_dir) = create_temp_ssim_file(10, 2);
 
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let output_path = temp_dir.path().to_str().unwrap();
 
-        let result = ssim_to_parquets(file_path, Some(output_path), Some("snappy"), Some(1000));
+        let result = ssim_to_parquets(&file_path, Some(output_path), Some("snappy"), Some(1000));
         assert!(
             result.is_ok(),
             "Failed to write SSIM to Parquet: {:?}",
@@ -196,10 +282,9 @@ mod integration_tests {
 
     #[test]
     fn test_minimal_ssim_data() {
-        let temp_file = create_temp_ssim_file(MINIMAL_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, _temp_dir) = create_temp_ssim_file(2, 1);
 
-        let result = ssim_to_dataframe(file_path, Some(100));
+        let result = ssim_to_dataframe(&file_path, Some(100));
         assert!(
             result.is_ok(),
             "Failed to parse minimal SSIM data: {:?}",
@@ -208,29 +293,6 @@ mod integration_tests {
 
         let df = result.unwrap();
         println!("Minimal data shape: {:?}", df.shape());
-    }
-
-    #[test]
-    fn test_empty_ssim_file() {
-        let temp_file = create_temp_ssim_file(EMPTY_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
-
-        let result = ssim_to_dataframe(file_path, Some(100));
-
-        match result {
-            Ok(df) => {
-                println!(
-                    "Empty file resulted in DataFrame with shape: {:?}",
-                    df.shape()
-                );
-            }
-            Err(e) => {
-                println!(
-                    "Empty file resulted in error (which might be expected): {:?}",
-                    e
-                );
-            }
-        }
     }
 
     #[test]
@@ -245,12 +307,11 @@ mod integration_tests {
 
     #[test]
     fn test_different_batch_sizes() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, _temp_dir) = create_temp_ssim_file(1000, 10);
 
         // Test with different batch sizes
-        for batch_size in [1, 2, 4, 6] {
-            let result = ssim_to_dataframe(file_path, Some(batch_size));
+        for batch_size in [1000, 5000, 10000, 15000] {
+            let result = ssim_to_dataframe(&file_path, Some(batch_size));
             assert!(
                 result.is_ok(),
                 "Failed with batch size {}: {:?}",
@@ -269,24 +330,21 @@ mod integration_tests {
 
     #[test]
     fn test_different_compressions() {
-        let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, temp_dir) = create_temp_ssim_file(100, 10);
 
         let compressions = ["snappy", "gzip", "lz4", "zstd", "uncompressed"];
 
         for compression in compressions {
-            let temp_dir = TempDir::new().expect("Failed to create temp directory");
             let output_path = temp_dir.path().to_str().unwrap();
 
             let result =
-                ssim_to_parquets(file_path, Some(output_path), Some(compression), Some(100));
+                ssim_to_parquets(&file_path, Some(output_path), Some(compression), Some(100));
             assert!(
                 result.is_ok(),
                 "Failed with compression {}: {:?}",
                 compression,
                 result.err()
             );
-
 
             let expected_ext = match compression {
                 "gzip" => "gz",
@@ -326,12 +384,10 @@ mod performance_tests {
 
     #[test]
     fn test_large_file_performance() {
-        let large_content = SAMPLE_SSIM_DATA.repeat(100);
-        let temp_file = create_temp_ssim_file(&large_content);
-        let file_path = temp_file.path().to_str().unwrap();
+        let (file_path, _temp_dir) = create_temp_ssim_file(9000, 99);
 
         let start = Instant::now();
-        let result = ssim_to_dataframe(file_path, Some(1000));
+        let result = ssim_to_dataframe(&file_path, Some(100000));
         let duration = start.elapsed();
 
         assert!(
@@ -345,32 +401,8 @@ mod performance_tests {
         println!("Large file DataFrame shape: {:?}", df.shape());
 
         assert!(
-            duration.as_secs() < 10,
-            "Processing should complete within 10 seconds"
+            duration.as_secs() < 30,
+            "Processing should complete within 30 seconds"
         );
-    }
-
-    #[test]
-    fn test_streaming_vs_batch_sizes() {
-        let large_content = SAMPLE_SSIM_DATA.repeat(50);
-        let temp_file = create_temp_ssim_file(&large_content);
-        let file_path = temp_file.path().to_str().unwrap();
-
-        let batch_sizes = [100, 500, 1000, 5000];
-
-        for &batch_size in &batch_sizes {
-            let start = Instant::now();
-            let result = ssim_to_dataframe(file_path, Some(batch_size));
-            let duration = start.elapsed();
-
-            assert!(
-                result.is_ok(),
-                "Failed with batch size {}: {:?}",
-                batch_size,
-                result.err()
-            );
-
-            println!("Batch size {}: {:?}", batch_size, duration);
-        }
     }
 }

@@ -12,9 +12,11 @@ polars.workspace = true
 serde.workspace = true
 csv = "1.3.1"
 
+
 [lib]
 name = "rusty_ssim_core"
 crate-type = ["rlib"]
 
 [dev-dependencies]
 tempfile = { version = "3.20.0" }
+polars-testing = { version = "0.50.0" }
