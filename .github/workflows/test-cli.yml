@@ -44,5 +44,5 @@ jobs:
       - name: Run tests
         if: github.ref_name != 'main'
         run: >
-          cargo test -p cli-rusty-ssim
+          cargo test -p cli-rusty-ssim --test cli_tests
 

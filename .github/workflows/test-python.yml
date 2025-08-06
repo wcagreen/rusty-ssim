@@ -3,7 +3,6 @@ on:
   pull_request:
     paths:
       - py-rusty-ssim/**
-      - rusty-ssim-core/**
       - .github/workflows/test-python.yml
 
     push:
@@ -11,7 +10,6 @@ on:
         - main
       paths:
         - py-rusty-ssim/**
-        - rusty-ssim-core/**
         - .github/workflows/test-python.yml
 
 concurrency:
@@ -36,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ '3.9', '3.12', '3.13', '3.13t' ]
+        python-version: [ '3.9', '3.12', '3.13' ]
         include:
           - os: windows-latest
             python-version: '3.13'
@@ -56,12 +54,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/py-rusty-ssim/.venv/$BIN" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/py-rusty-ssim/.venv" >> $GITHUB_ENV
 
-      - name: Install maturin
-        if: matrix.python-version == '3.13t'
-        run: pip install maturin
-
       - name: Install Python dependencies
-        if: matrix.python-version != '3.13t'
         run: |
           pip install uv
           # Install typing-extensions separately whilst the `--extra-index-url` in `requirements-ci.txt`
@@ -82,5 +75,5 @@ jobs:
         run: maturin develop
 
       - name: Run tests
-        if: github.ref_name != 'main' && matrix.python-version != '3.13t'
+        if: github.ref_name != 'main'
         run: pytest
