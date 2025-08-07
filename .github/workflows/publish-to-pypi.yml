@@ -4,6 +4,7 @@ on:
   release:
     types: [created]
 
+
 permissions:
   contents: read
 
@@ -32,9 +33,6 @@ jobs:
           python-version: 3.x
       - name: Build wheels
         uses: PyO3/maturin-action@v1
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
-          CC_aarch64_unknown_linux_gnu: "aarch64-linux-gnu-gcc"
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path py-rusty-ssim/Cargo.toml
@@ -42,9 +40,6 @@ jobs:
           manylinux: auto
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
-          CC_aarch64_unknown_linux_gnu: "aarch64-linux-gnu-gcc"
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path py-rusty-ssim/Cargo.toml -i python3.13t
@@ -76,9 +71,6 @@ jobs:
           python-version: 3.x
       - name: Build wheels
         uses: PyO3/maturin-action@v1
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
-          CC_aarch64_unknown_linux_gnu: "aarch64-linux-gnu-gcc"
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path py-rusty-ssim/Cargo.toml
@@ -86,9 +78,6 @@ jobs:
           manylinux: musllinux_1_2
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
-          CC_aarch64_unknown_linux_gnu: "aarch64-linux-gnu-gcc"
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path py-rusty-ssim/Cargo.toml -i python3.13t
@@ -142,9 +131,9 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: macos-14
+          - runner: macos-13
             target: x86_64
-          - runner: macos-15
+          - runner: macos-14
             target: aarch64
     steps:
       - uses: actions/checkout@v4
@@ -206,7 +195,7 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: PyO3/maturin-action@v1
         env:
-          Environment name: python-release
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
