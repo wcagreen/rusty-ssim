@@ -67,8 +67,8 @@ cargo build -p cli-rusty-ssim --release
 - Build tools (build-essential, Xcode CLI tools, or VS Build Tools)
 
 ### Future Installation Options
-*Coming soon:*
 - `pip install rustyssim` - PyPI package
+- Package binaries.
 - Docker container with pre-built binaries
 
 ## Documentation
