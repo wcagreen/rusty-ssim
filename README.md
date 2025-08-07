@@ -73,10 +73,10 @@ cargo build -p cli-rusty-ssim --release
 
 ## Documentation
 
-### 📖 [Python API Documentation](https://github.com/wcagreen/rusty-ssim/docs/python.md)
+### 📖 [Python API Documentation](https://github.com/wcagreen/rusty-ssim/blob/main/docs/python.md)
 Complete reference for all Python functions with examples, parameters, and return values.
 
-### 💻 [CLI Documentation](https://github.com/wcagreen/rusty-ssim/docs/cli-usage.md) 
+### 💻 [CLI Documentation](https://github.com/wcagreen/rusty-ssim/blob/main/docs/cli-usage.md) 
 Comprehensive guide for command-line usage, performance tuning, and integration examples.
 
 ## Data Structure
