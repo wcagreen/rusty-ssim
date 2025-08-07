@@ -5,12 +5,12 @@ on:
       - py-rusty-ssim/**
       - .github/workflows/test-python.yml
 
-    push:
-      branches:
-        - main
-      paths:
-        - py-rusty-ssim/**
-        - .github/workflows/test-python.yml
+  push:
+    branches:
+      - main
+    paths:
+      - py-rusty-ssim/**
+      - .github/workflows/test-python.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
