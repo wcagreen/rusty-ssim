@@ -1,9 +1,9 @@
 name: Publish RustySSIM to PyPi
 
 on:
-  release:
-    types: [created]
-
+  push:
+    tags:
+      - 'py-v*'
 
 permissions:
   contents: read
