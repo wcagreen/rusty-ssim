@@ -2,7 +2,7 @@
 
 A high-performance Rust-built IATA SSIM (Standard Schedules Information Manual) parser that can be used via CLI, Python, or Rust. This tool efficiently parses SSIM files into Polars DataFrames or exports directly to CSV/Parquet formats with streaming support for large files.
 
-[![Build Status](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-pypi.yml/badge.svg?branch=main&event=release)](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-pypi.yml)
+[![RustySSIM PyPI Build](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-pypi.yml/badge.svg)](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-pypi.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
