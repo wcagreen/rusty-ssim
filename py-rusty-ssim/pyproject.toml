@@ -42,13 +42,12 @@ dev = [
     "pytest-benchmark>=5.1.0"
 ]
 
-
 [project.urls]
 Repository = "https://github.com/wcagreen/rusty-ssim"
 Documentation = "https://github.com/wcagreen/rusty-ssim/documentation/python.md"
 
 [tool.maturin]
-include = ["rustyssim/*.pyi", "rustyssim/py.typed"]
+include = ["rustyssim/*.pyi", "rustyssim/py.typed", { path = "path/**/*", format = "sdist" }]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
