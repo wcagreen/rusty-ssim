@@ -1,4 +1,7 @@
 name: Test CLI
+permissions:
+  contents: read
+  pull-requests: read
 
 on:
   pull_request:
@@ -23,12 +26,12 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  test:
+  windows:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ windows-latest ]
 
     steps:
       - uses: actions/checkout@v4
@@ -41,8 +44,42 @@ jobs:
         with:
           save-if: ${{ github.ref_name == 'main' }}
 
+      - name: Build CLI binary
+        run: cargo build -p cli-rusty-ssim
+
+      - name: Add binary to PATH (Windows)
+        run: echo "${{ github.workspace }}\\target\debug" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Run tests
         if: github.ref_name != 'main'
         run: >
           cargo test -p cli-rusty-ssim --test cli_tests
 
+  linux:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref_name == 'main' }}
+
+      - name: Build CLI binary
+        run: cargo build -p cli-rusty-ssim
+
+      - name: Add binary to PATH (Unix)
+        run: echo "${{ github.workspace }}/target/debug" >> $GITHUB_PATH
+
+      - name: Run tests
+        if: github.ref_name != 'main'
+        run: >
+          cargo test -p cli-rusty-ssim --test cli_tests
