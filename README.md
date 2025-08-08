@@ -46,7 +46,17 @@ ssim parquet -s schedule.ssim -o ./output -c zstd -b 50000
 
 ## Installation
 
-### Current Installation (Build from Source)
+### Python
+
+```bash
+
+pip install rustyssim
+
+```
+
+
+
+### (Build from Source)
 
 ```bash
 # Clone the repository
@@ -64,12 +74,9 @@ cargo build -p cli-rusty-ssim --release
 **Requirements:**
 - Python 3.9+
 - Rust toolchain ([rustup.rs](https://rustup.rs))
-- Build tools (build-essential, Xcode CLI tools, or VS Build Tools)
 
 ### Future Installation Options
-- `pip install rustyssim` - PyPI package
 - Package binaries.
-- Docker container with pre-built binaries
 
 ## Documentation
 
@@ -96,7 +103,7 @@ Contains flight segment information.
 
 ## Use Cases
 
-### Data Analytics & Business Intelligence
+### Data Analytics
 ```python
 # Analyze route networks
 df = rs.parse_ssim_to_dataframe("schedule.ssim")
@@ -106,14 +113,6 @@ routes = df.group_by(['departure_station', 'arrival_station']).count()
 rs.parse_ssim_to_csv("schedule.ssim", "analytics_export.csv")
 ```
 
-### Data Engineering Pipelines
-```bash
-# Batch processing in ETL pipelines
-ssim parquet -s "./huge_multi_carrier_ssim.dat" -o /data/processed/ -c zstd -b 100000
-
-```
-
-### Airlines & Aviation Analytics
 ```python
 # Split by carrier for airline-specific analysis
 carriers, flights, segments = rs.split_ssim_to_dataframes("schedule.ssim")
@@ -124,6 +123,14 @@ capacity_analysis = aa_flights.group_by('aircraft_type').agg([
     pl.count().alias('flights'),
     pl.col('departure_station').n_unique().alias('origins')
 ])
+```
+
+
+### Data Engineering Pipelines
+```bash
+# Batch processing in ETL pipelines
+ssim parquet -s "./huge_multi_carrier_ssim.dat" -o /data/processed/ -c zstd -b 100000
+
 ```
 
 ## Development
