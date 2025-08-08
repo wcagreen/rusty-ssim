@@ -1,4 +1,6 @@
 name: test-python.yml
+permissions:
+  contents: read
 on:
   pull_request:
     paths:
