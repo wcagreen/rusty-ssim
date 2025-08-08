@@ -1,0 +1,159 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: ssim-linux-x64
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: ssim-linux-x64-musl
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: ssim-linux-arm64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: ssim-windows-x64.exe
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: ssim-macos-x64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: ssim-macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          fi
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build binary
+        run: |
+          cargo build --release --target ${{ matrix.target }} -p cli-rusty-ssim
+        env:
+          RUSTFLAGS: -C target-feature=+crt-static
+
+      - name: Package binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf ${{ matrix.name }}.tar.gz ssim
+          echo "ASSET_PATH=target/${{ matrix.target }}/release/${{ matrix.name }}.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ matrix.name }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Package binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a ${{ matrix.name }}.zip ssim.exe
+          echo "ASSET_PATH=target/${{ matrix.target }}/release/${{ matrix.name }}.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "ASSET_NAME=${{ matrix.name }}.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload binary to release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ env.ASSET_PATH }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -la ./artifacts
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/cli-v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "SSIM CLI v${{ steps.version.outputs.version }}"
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: ./artifacts/**/*
+          body: |
+            ## SSIM CLI v${{ steps.version.outputs.version }}
+            
+            Fast, reliable command-line tool for parsing IATA SSIM files and converting them to CSV or Parquet formats.
+            
+            ### Download Instructions
+            
+            Choose the appropriate binary for your system:
+            
+            - **Linux (x64)**: `ssim-linux-x64.tar.gz`
+            - **Linux (ARM64)**: `ssim-linux-arm64.tar.gz` 
+            - **Linux (musl)**: `ssim-linux-x64-musl.tar.gz`
+            - **macOS (Intel)**: `ssim-macos-x64.tar.gz`
+            - **macOS (Apple Silicon)**: `ssim-macos-arm64.tar.gz`
+            - **Windows**: `ssim-windows-x64.exe.zip`
+            
+            ### Installation
+            
+            **Linux/macOS:**
+            ```bash
+            # Download and extract
+            curl -L https://github.com/wcagreen/rusty-ssim/releases/download/${{ github.ref_name }}/ssim-linux-x64.tar.gz | tar xz
+            
+            # Make executable and move to PATH
+            chmod +x ssim
+            sudo mv ssim /usr/local/bin/
+            ```
+            
+            **Windows:**
+            1. Download `ssim-windows-x64.exe.zip`
+            2. Extract the `cli-rusty-ssim.exe` file
+            3. Add the directory to your PATH or run directly
+            
+            ### Usage
+            
+            ```bash
+            # Convert SSIM to CSV
+            ssim csv --ssim-path input.ssim --output-path output.csv
+            
+            # Convert SSIM to Parquet with compression
+            ssim parquet --ssim-path input.ssim --output-path ./output/ --compression snappy
+            
+            # View help
+            ssim --help
+            ```
