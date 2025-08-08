@@ -14,8 +14,14 @@ name: "CodeQL Advanced"
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - './py-rusty-ssim/README.md'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - './py-rusty-ssim/README.md'
   schedule:
     - cron: '30 21 * * 2'
 
