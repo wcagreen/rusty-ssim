@@ -69,18 +69,6 @@ jobs:
         env:
           RUSTFLAGS: -C target-feature=+crt-static
 
-      - name: Verify binary exists
-        run: |
-          echo "Contents of target/${{ matrix.target }}/release:"
-          ls -la target/${{ matrix.target }}/release/
-          echo "Looking for binary: ${{ matrix.binary }}"
-          if [ -f "target/${{ matrix.target }}/release/${{ matrix.binary }}" ]; then
-            echo "Binary found!"
-          else
-            echo "Binary not found!"
-            exit 1
-          fi
-
       - name: Package binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
