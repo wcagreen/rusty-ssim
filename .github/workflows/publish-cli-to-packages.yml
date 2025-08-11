@@ -16,15 +16,15 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             name: cli-rusty-ssim-linux-x64
-            binary: cli-rusty-ssim.exe
+            binary: cli-rusty-ssim
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             name: cli-rusty-ssim-linux-x64-musl
-            binary: cli-rusty-ssim.exe
+            binary: cli-rusty-ssim
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             name: cli-rusty-ssim-linux-arm64
-            binary: cli-rusty-ssim.exe
+            binary: cli-rusty-ssim
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             name: cli-rusty-ssim-windows-x64
@@ -32,11 +32,11 @@ jobs:
           - target: x86_64-apple-darwin
             os: macos-latest
             name: cli-rusty-ssim-macos-x64
-            binary: cli-rusty-ssim.exe
+            binary: cli-rusty-ssim
           - target: aarch64-apple-darwin
             os: macos-latest
             name: cli-rusty-ssim-macos-arm64
-            binary: cli-rusty-ssim.exe
+            binary: cli-rusty-ssim
 
     runs-on: ${{ matrix.os }}
 
