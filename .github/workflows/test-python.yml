@@ -13,8 +13,6 @@ on:
     paths:
       - py-rusty-ssim/**
       - .github/workflows/test-python.yml
-    paths-ignore:
-      - 'py-rusty-ssim/README.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
