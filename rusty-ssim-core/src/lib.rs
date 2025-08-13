@@ -1,7 +1,6 @@
 pub mod records {
     pub mod carrier_record;
     pub mod flight_leg_records;
-    pub mod flight_segment;
     pub mod segment_records;
 }
 
