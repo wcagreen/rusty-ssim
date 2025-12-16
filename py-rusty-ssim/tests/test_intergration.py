@@ -14,7 +14,7 @@ except Exception(ImportError):
 
 
 def multi_ssim_content_generator(flight_count=1000, ivi_count=10):
-    """Create larger SSIM content for performance testing"""
+    """Create a multi carrier SSIM file for performance testing"""
     lines = [
         "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001"
     ]
@@ -32,13 +32,13 @@ def multi_ssim_content_generator(flight_count=1000, ivi_count=10):
                 padded_ivi = str(ivi).zfill(2)
                 leg = "01"
                 lines.append(
-                    f"3 XX {flight_number}{padded_ivi}{leg}J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003"
+                    f"3 {carrier} {flight_number}{padded_ivi}{leg}J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003"
                 )
                 lines.append(
-                    f"4 XX {flight_number}{padded_ivi}{leg}J              AB050AMSGRQKL 2562                                                                                                                                                    000006"
+                    f"4 {carrier} {flight_number}{padded_ivi}{leg}J              AB050AMSGRQKL 2562                                                                                                                                                    000006"
                 )
                 lines.append(
-                    f"4 XX {flight_number}{padded_ivi}{leg}J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006"
+                    f"4 {carrier} {flight_number}{padded_ivi}{leg}J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006"
                 )
 
         lines.append(
@@ -49,7 +49,7 @@ def multi_ssim_content_generator(flight_count=1000, ivi_count=10):
 
 
 def ssim_content_generator(flight_count=1000, ivi_count=10):
-    """Create larger SSIM content for performance testing"""
+    """Create single carrier SSIM file for performance testing"""
     lines = [
         "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001",
         "2UXX  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002",
