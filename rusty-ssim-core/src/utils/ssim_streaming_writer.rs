@@ -368,25 +368,20 @@ impl EnhancedStreamingSsimWriter {
                             }
                         }
                         Some('3') => {
-                            if let Some(carrier) = &self.persistent_carriers {
-                            if let Some(record) =
-                                parse_flight_record_legs(&line, carrier)
-                            {
+                            if let Some(carrier) = &self.persistent_carriers && let Some(record) = parse_flight_record_legs(&line, carrier) {
+
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
+                            
                             }
                         }
-                    }
                         Some('4') => {
-                            if let Some(carrier) = &self.persistent_carriers {
-                            if let Some(record) =
-                                parse_segment_record(&line, carrier)
-                            {
+                            if let Some(carrier) = &self.persistent_carriers && let Some(record) = parse_segment_record(&line, carrier) {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
+                            
                             }
                         }
-                    }
                         Some('5') => {
                             // Process and write final batch for this carrier
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
@@ -474,25 +469,17 @@ impl EnhancedStreamingSsimWriter {
                             }
                         }
                         Some('3') => {
-                            if let Some(carrier) = &self.persistent_carriers {
-                            if let Some(record) =
-                                parse_flight_record_legs(&line, carrier)
-                            {
+                            if let Some(carrier) = &self.persistent_carriers && let Some(record) = parse_flight_record_legs(&line, carrier) {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
-                    }
                         Some('4') => {
-                            if let Some(carrier) = &self.persistent_carriers {
-                            if let Some(record) =
-                                parse_segment_record(&line, carrier)
-                            {
+                            if let Some(carrier) = &self.persistent_carriers && let Some(record) = parse_segment_record(&line, carrier) {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
                         }
-                    }
                         Some('5') => {
                             // Process final batch for this carrier
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
