@@ -102,7 +102,7 @@ pub(crate) fn combine_flights_and_segments(
 /// # Errors
 /// Returns an error if parsing or merging fails.
 pub fn ssim_to_dataframe(file_path: &str, batch_size: Option<usize>) -> PolarsResult<DataFrame> {
-    Ok(ssim_to_dataframe_streaming(file_path, batch_size)?)
+    ssim_to_dataframe_streaming(file_path, batch_size)
 }
 
 /// Parses an SSIM file into three DataFrames (Carriers, Flights, Segments).
@@ -123,5 +123,5 @@ pub fn ssim_to_dataframes(
     file_path: &str,
     batch_size: Option<usize>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-    Ok(ssim_to_dataframes_streaming(file_path, batch_size)?)
+    ssim_to_dataframes_streaming(file_path, batch_size)
 }
