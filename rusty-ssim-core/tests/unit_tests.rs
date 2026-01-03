@@ -48,7 +48,7 @@ mod parser_tests {
             record_serial_number: "000002".to_string(),
         }];
 
-        let result = parse_flight_record_legs(line, &carriers);
+        let result = parse_flight_record_legs(line, &carriers[0]);
         assert!(result.is_some());
 
         let record = result.unwrap();
@@ -125,7 +125,7 @@ mod parser_tests {
             record_serial_number: "000002".to_string(),
         }];
 
-        let result = parse_segment_record(line, &carriers);
+        let result = parse_segment_record(line, &carriers[0]);
         assert!(result.is_some());
 
         let record = result.unwrap();

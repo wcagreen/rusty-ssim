@@ -2,10 +2,11 @@ use crate::utils::ssim_parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
 use polars::prelude::*;
 
 pub fn convert_to_dataframes(
-    carriers: Vec<CarrierRecord>,
+    carrier: Option<CarrierRecord>,
     flights: Vec<FlightLegRecord>,
     segments: Vec<SegmentRecords>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+    let carriers = carrier.into_iter().collect::<Vec<_>>();
     let carrier_df = if !carriers.is_empty() {
         df! {
             "airline_designator" => carriers.iter().map(|r| r.airline_designator.as_str()).collect::<Vec<_>>(),

@@ -2,7 +2,7 @@ use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flight
 use crate::generators::ssim_dataframe::convert_to_dataframes;
 use crate::utils::ssim_exporters::to_parquet;
 use crate::utils::ssim_parser::{
-    parse_carrier_record, parse_flight_record_legs, parse_segment_record,
+    CarrierRecord, parse_carrier_record, parse_flight_record_legs, parse_segment_record,
 };
 use polars::prelude::*;
 use std::fs::{File, OpenOptions, create_dir_all};
@@ -17,7 +17,7 @@ pub struct EnhancedStreamingSsimWriter {
     batch_size: usize,
     line_buffer: String,
     peeked_line: Option<String>,
-    persistent_carriers: Vec<crate::records::carrier_record::CarrierRecord>,
+    persistent_carriers: Option<CarrierRecord>,
     csv_writer: Option<CsvWriterState>,
     parquet_file_counter: usize,
 }
@@ -37,7 +37,7 @@ impl EnhancedStreamingSsimWriter {
             batch_size: batch_size.unwrap_or(DEFAULT_BATCH_SIZE),
             line_buffer: String::new(),
             peeked_line: None,
-            persistent_carriers: Vec::new(),
+            persistent_carriers: None,
             csv_writer: None,
             parquet_file_counter: 0,
         })
@@ -308,7 +308,7 @@ impl EnhancedStreamingSsimWriter {
 
     /// Extract carrier name for filename generation using persistent carriers
     fn get_carrier_filename(&self) -> String {
-        if let Some(carrier) = self.persistent_carriers.first() {
+        if let Some(carrier) = &self.persistent_carriers {
             let airline_designator = carrier.airline_designator.trim();
             let control_duplicate_indicator = carrier.control_duplicate_indicator.trim();
 
@@ -363,26 +363,30 @@ impl EnhancedStreamingSsimWriter {
                         Some('0') => continue, // Skip zero records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
+                                self.persistent_carriers = Some(record);
                                 last_record_type = Some('2');
                             }
                         }
                         Some('3') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_flight_record_legs(&line, &self.persistent_carriers)
+                                parse_flight_record_legs(&line, carrier)
                             {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
+                    }
                         Some('4') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_segment_record(&line, &self.persistent_carriers)
+                                parse_segment_record(&line, carrier)
                             {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
                         }
+                    }
                         Some('5') => {
                             // Process and write final batch for this carrier
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
@@ -395,7 +399,7 @@ impl EnhancedStreamingSsimWriter {
                                 segment_batch.clear();
                             }
 
-                            self.persistent_carriers.clear();
+                            self.persistent_carriers = None;
                             last_record_type = Some('5');
                             continue;
                         }
@@ -465,26 +469,30 @@ impl EnhancedStreamingSsimWriter {
                         Some('0') => continue, // Skip zero records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
+                                self.persistent_carriers = Some(record);
                                 last_record_type = Some('2');
                             }
                         }
                         Some('3') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_flight_record_legs(&line, &self.persistent_carriers)
+                                parse_flight_record_legs(&line, carrier)
                             {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
+                    }
                         Some('4') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_segment_record(&line, &self.persistent_carriers)
+                                parse_segment_record(&line, carrier)
                             {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
                         }
+                    }
                         Some('5') => {
                             // Process final batch for this carrier
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
@@ -508,7 +516,7 @@ impl EnhancedStreamingSsimWriter {
                                 carrier_combined_df = DataFrame::empty();
                             }
 
-                            self.persistent_carriers.clear();
+                            self.persistent_carriers = None;
                             last_record_type = Some('5');
                             continue;
                         }

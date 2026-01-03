@@ -1,7 +1,7 @@
 use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
 use crate::generators::ssim_dataframe::convert_to_dataframes;
 use crate::utils::ssim_parser::{
-    parse_carrier_record, parse_flight_record_legs, parse_segment_record,
+    CarrierRecord, parse_carrier_record, parse_flight_record_legs, parse_segment_record
 };
 use polars::prelude::*;
 use std::fs::File;
@@ -16,7 +16,7 @@ pub struct StreamingSsimReader {
     line_buffer: String,
     peeked_line: Option<String>,
     // Persistent carrier records until we hit record type 5
-    persistent_carriers: Vec<crate::records::carrier_record::CarrierRecord>,
+    persistent_carriers: Option<CarrierRecord>,
 }
 
 impl StreamingSsimReader {
@@ -29,7 +29,7 @@ impl StreamingSsimReader {
             batch_size: batch_size.unwrap_or(DEFAULT_BATCH_SIZE),
             line_buffer: String::new(),
             peeked_line: None,
-            persistent_carriers: Vec::new(),
+            persistent_carriers: None,
         })
     }
 
@@ -171,26 +171,30 @@ impl StreamingSsimReader {
                         Some('0') => continue, // Skip Zeros Records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
+                                self.persistent_carriers = Some(record);
                                 last_record_type = Some('2');
                             }
                         }
                         Some('3') => {
-                            if let Some(record) =
-                                parse_flight_record_legs(&line, &self.persistent_carriers)
-                            {
-                                flight_batch.push(record);
-                                last_record_type = Some('3');
-                            }
+                            if let Some(carrier) = &self.persistent_carriers {
+                                if let Some(record) =
+                                parse_flight_record_legs(&line, carrier)
+                                {
+                                    flight_batch.push(record);
+                                    last_record_type = Some('3');
+                                    }
                         }
+                    }
                         Some('4') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_segment_record(&line, &self.persistent_carriers)
+                                parse_segment_record(&line, carrier)
                             {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
                         }
+                    }
                         Some('5') => {
                             // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
@@ -204,7 +208,7 @@ impl StreamingSsimReader {
                                 segment_batch.clear();
                             }
 
-                            self.persistent_carriers.clear();
+                            self.persistent_carriers = None;
                             last_record_type = Some('5');
                             continue;
                         }
@@ -277,26 +281,30 @@ impl StreamingSsimReader {
                         Some('0') => continue, // Skip Zero records
                         Some('2') => {
                             if let Some(record) = parse_carrier_record(&line) {
-                                self.persistent_carriers.push(record);
+                                self.persistent_carriers = Some(record);
                                 last_record_type = Some('2');
                             }
                         }
                         Some('3') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_flight_record_legs(&line, &self.persistent_carriers)
+                                parse_flight_record_legs(&line, carrier)
                             {
                                 flight_batch.push(record);
                                 last_record_type = Some('3');
                             }
                         }
+                    }
                         Some('4') => {
+                            if let Some(carrier) = &self.persistent_carriers {
                             if let Some(record) =
-                                parse_segment_record(&line, &self.persistent_carriers)
+                                parse_segment_record(&line, carrier)
                             {
                                 segment_batch.push(record);
                                 last_record_type = Some('4');
                             }
                         }
+                    }
                         Some('5') => {
                             // Process the final batch with persistent carriers before clearing
                             if !flight_batch.is_empty() || !segment_batch.is_empty() {
@@ -317,7 +325,7 @@ impl StreamingSsimReader {
                                 segment_batch.clear();
                             }
 
-                            self.persistent_carriers.clear();
+                            self.persistent_carriers = None;
                             last_record_type = Some('5');
                             continue;
                         }
@@ -384,10 +392,10 @@ impl StreamingSsimReader {
         flight_batch: &mut Vec<crate::records::flight_leg_records::FlightLegRecord>,
         segment_batch: &mut Vec<crate::records::segment_records::SegmentRecords>,
     ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-        let carrier_batch = self.persistent_carriers.clone();
+        
 
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier_batch,
+            self.persistent_carriers.clone(),
             std::mem::take(flight_batch),
             std::mem::take(segment_batch),
         )?;

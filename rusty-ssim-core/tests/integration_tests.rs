@@ -48,13 +48,36 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
         "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001".to_string(),
     ];
 
-    let carriers = ["XX ", "YY ", "ZZ "];
+    let carriers = [["XX", " "], ["YY", "X"], ["YY", " "], ["ZZ", " "]];
 
     for carrier in &carriers {
-        lines.push(format!("2U{carrier_code}  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002",
-                           carrier_code=carrier
-        ));
+        let carrier_code = carrier[0];
+        let carrier_flag = carrier[1]; 
 
+        let prefix = format!(
+            "2U{}  0008S18 25MAR1827OCT1813OCT17                                    P",
+            carrier_code
+        );
+
+        // column 108 (1-based) => index 107 (0-based)
+        let flag_index = 107usize;
+        let pad_to_flag = flag_index.saturating_sub(prefix.len());
+
+        let tail = "1301000002";
+
+        let used_before_tail = prefix.len() + pad_to_flag + 1;
+        let pad_after_flag = 200usize.saturating_sub(used_before_tail + tail.len());
+
+        let line = format!(
+            "{}{}{}{}{}",
+            prefix,
+            " ".repeat(pad_to_flag),
+            carrier_flag,
+            " ".repeat(pad_after_flag),
+            tail
+        );
+
+        lines.push(line);
         for flight_idx in 0..flights_count {
             let flight_number = format!("{:04}", 1000 + flight_idx);
             for ivi in 0..ivi_count {
@@ -62,7 +85,7 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
                 let leg = "01";
                 lines.push(format!(
                     "3 {carrier_code} {flight}{ivi_info}{leg_info}J28MAR1803APR18 2      KEF05100510+0000  AMS08000800+0200  73HY                                                             XY   13                            Y189VV738H189         000003",
-                    carrier_code=carrier,
+                    carrier_code=carrier[0],
                     flight = flight_number,
                     ivi_info = padded_ivi,
                     leg_info = leg
@@ -70,7 +93,7 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
 
                 lines.push(format!(
                     "4 {carrier_code} {flight}{ivi_info}{leg_info}J              AB050AMSGRQKL 2562                                                                                                                                                    000006",
-                    carrier_code=carrier,
+                    carrier_code=carrier[0],
                     flight = flight_number,
                     ivi_info = padded_ivi,
                     leg_info = leg
@@ -78,7 +101,7 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
 
                 lines.push(format!(
                     "4 {carrier_code} {flight}{ivi_info}{leg_info}J              AB127AMSGRQKLM DBA FLYFREE                                                                                                                                            000006",
-                    carrier_code=carrier,
+                    carrier_code=carrier[0],
                     flight = flight_number,
                     ivi_info = padded_ivi,
                     leg_info = leg
@@ -87,7 +110,7 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
         }
 
         lines.push(format!("5 {carrier_code}                                                                                                                                                                                       000011E000012",
-                           carrier_code=carrier));
+                           carrier_code=carrier[0]));
     }
     lines.join("\n")
 }
@@ -202,8 +225,8 @@ mod integration_tests {
         let options = DataFrameEqualOptions::default().with_check_row_order(false);
 
         let expected_carriers = df! {
-            "airline_designator" => ["XX ", "YY ", "ZZ "],
-            "control_duplicate_indicator" => [" ", " ", " "]
+            "airline_designator" => ["XX ", "YY ", "YY ", "ZZ "],
+            "control_duplicate_indicator" => [" ", "X", " ", " "]
         };
 
         assert_dataframe_equal!(

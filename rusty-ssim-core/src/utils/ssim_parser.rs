@@ -4,11 +4,9 @@ pub use crate::records::segment_records::SegmentRecords;
 
 pub fn parse_flight_record_legs(
     line: &str,
-    persistent_carriers: &[CarrierRecord],
+    persistent_carriers: &CarrierRecord,
 ) -> Option<FlightLegRecord> {
-    let airline_designator = &line[2..5];
-    let control_duplicate_indicator =
-        get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
+    let control_duplicate_indicator = persistent_carriers.control_duplicate_indicator.clone();
 
     Some(FlightLegRecord {
         flight_designator: format!(
@@ -71,12 +69,9 @@ pub fn parse_flight_record_legs(
 
 pub fn parse_segment_record(
     line: &str,
-    persistent_carriers: &[CarrierRecord],
+    persistent_carriers: &CarrierRecord,
 ) -> Option<SegmentRecords> {
-    let airline_designator = &line[2..5];
-    let control_duplicate_indicator =
-        get_control_duplicate_indicator_for_airline(airline_designator, persistent_carriers);
-
+    let control_duplicate_indicator = persistent_carriers.control_duplicate_indicator.clone();
     Some(SegmentRecords {
         flight_designator: format!(
             "{}_{}{}{} {} {}",
@@ -127,17 +122,4 @@ pub fn parse_carrier_record(line: &str) -> Option<CarrierRecord> {
     })
 }
 
-/// Helper function to get the appropriate control duplicate indicator for an airline
-/// from the persistent carriers context
-fn get_control_duplicate_indicator_for_airline(
-    airline_designator: &str,
-    persistent_carriers: &[CarrierRecord],
-) -> String {
-    for carrier in persistent_carriers {
-        if carrier.airline_designator == airline_designator {
-            return carrier.control_duplicate_indicator.clone();
-        }
-    }
 
-    String::new()
-}
