@@ -243,10 +243,8 @@ impl EnhancedStreamingSsimWriter {
     fn ensure_directory_exists(file_path: &str) -> std::io::Result<()> {
         let path = Path::new(file_path);
 
-        if let Some(parent_directory) = path.parent() {
-            if !parent_directory.exists() {
-                create_dir_all(parent_directory)?;
-            }
+        if let Some(parent_directory) = path.parent()  && !parent_directory.exists() {
+            create_dir_all(parent_directory)?;
         }
 
         Ok(())
