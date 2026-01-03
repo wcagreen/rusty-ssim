@@ -2623,13 +2623,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustyssim"
-version = "0.3.2"
-dependencies = [
- "rusty-ssim-core",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
