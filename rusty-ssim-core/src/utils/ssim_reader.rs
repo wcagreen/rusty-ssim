@@ -15,6 +15,7 @@ use crate::records::segment_records::SegmentRecords;
 use crate::utils::ssim_exporters::to_parquet;
 use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
 use polars::prelude::*;
+use rayon::prelude::*;
 use std::fs::{File, OpenOptions, create_dir_all};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -154,15 +155,19 @@ impl SsimReader {
     }
 
     /// Main processing loop - works with any BatchProcessor
+    /// 
+    /// Uses parallel parsing with rayon for flight and segment records
+    /// while maintaining sequential carrier context handling.
     pub fn process<P: BatchProcessor>(&mut self, processor: &mut P) -> PolarsResult<()> {
-        let mut flight_batch = Vec::new();
-        let mut segment_batch = Vec::new();
+        // Collect raw lines for parallel parsing
+        let mut flight_lines: Vec<String> = Vec::new();
+        let mut segment_lines: Vec<String> = Vec::new();
         let mut last_record_type: Option<char> = None;
 
         loop {
             match self.read_next_line() {
                 Ok(Some(line)) => {
-                    let record_type = line.chars().nth(0);
+                    let record_type = line.chars().next();
 
                     match record_type {
                         Some('1') | Some('0') => continue,
@@ -173,26 +178,26 @@ impl SsimReader {
                             }
                         }
                         Some('3') => {
-                            if let Some(carrier) = &self.persistent_carriers 
-                                && let Some(record) = parse_flight_record_legs(&line, carrier) 
-                            {
-                                flight_batch.push(record);
+                            if self.persistent_carriers.is_some() {
+                                flight_lines.push(line);
                                 last_record_type = Some('3');
                             }
                         }
                         Some('4') => {
-                            if let Some(carrier) = &self.persistent_carriers 
-                                && let Some(record) = parse_segment_record(&line, carrier) 
-                            {
-                                segment_batch.push(record);
+                            if self.persistent_carriers.is_some() {
+                                segment_lines.push(line);
                                 last_record_type = Some('4');
                             }
                         }
                         Some('5') => {
-                            if !flight_batch.is_empty() || !segment_batch.is_empty() {
+                            if !flight_lines.is_empty() || !segment_lines.is_empty() {
+                                let (flight_batch, segment_batch) = self.parse_lines_parallel(
+                                    std::mem::take(&mut flight_lines),
+                                    std::mem::take(&mut segment_lines),
+                                );
                                 processor.process_batch(
-                                    std::mem::take(&mut flight_batch),
-                                    std::mem::take(&mut segment_batch),
+                                    flight_batch,
+                                    segment_batch,
                                     self.persistent_carriers.as_ref(),
                                 )?;
                             }
@@ -205,13 +210,17 @@ impl SsimReader {
                         _ => continue,
                     }
 
-                    let current_batch_size = flight_batch.len() + segment_batch.len();
+                    let current_batch_size = flight_lines.len() + segment_lines.len();
                     match self.should_continue_batch(current_batch_size, last_record_type) {
                         Ok(should_continue) => {
                             if !should_continue {
+                                let (flight_batch, segment_batch) = self.parse_lines_parallel(
+                                    std::mem::take(&mut flight_lines),
+                                    std::mem::take(&mut segment_lines),
+                                );
                                 processor.process_batch(
-                                    std::mem::take(&mut flight_batch),
-                                    std::mem::take(&mut segment_batch),
+                                    flight_batch,
+                                    segment_batch,
                                     self.persistent_carriers.as_ref(),
                                 )?;
                             }
@@ -234,16 +243,58 @@ impl SsimReader {
             }
         }
 
-        if !flight_batch.is_empty() || !segment_batch.is_empty() {
+        if !flight_lines.is_empty() || !segment_lines.is_empty() {
+            let (flight_batch, segment_batch) = self.parse_lines_parallel(
+                std::mem::take(&mut flight_lines),
+                std::mem::take(&mut segment_lines),
+            );
             processor.process_batch(
-                std::mem::take(&mut flight_batch),
-                std::mem::take(&mut segment_batch),
+                flight_batch,
+                segment_batch,
                 self.persistent_carriers.as_ref(),
             )?;
         }
 
         processor.finalize()?;
         Ok(())
+    }
+
+    /// Parse flight and segment lines in parallel using rayon.
+    /// 
+    /// This is the hot path - parsing string slices into records is CPU-bound
+    /// and benefits significantly from parallelization.
+    fn parse_lines_parallel(
+        &self,
+        flight_lines: Vec<String>,
+        segment_lines: Vec<String>,
+    ) -> (Vec<FlightLegRecord>, Vec<SegmentRecords>) {
+        let carrier = self.persistent_carriers.as_ref();
+        
+        // Parse flights and segments in parallel
+        let (flights, segments) = rayon::join(
+            || {
+                if let Some(c) = carrier {
+                    flight_lines
+                        .par_iter()
+                        .filter_map(|line| parse_flight_record_legs(line, c))
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            },
+            || {
+                if let Some(c) = carrier {
+                    segment_lines
+                        .par_iter()
+                        .filter_map(|line| parse_segment_record(line, c))
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            },
+        );
+
+        (flights, segments)
     }
 }
 

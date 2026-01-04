@@ -156,7 +156,8 @@ mod cli_tests {
                 "csv",
                 "-s", temp_file.path().to_str().unwrap(),
                 "-o", output_path.to_str().unwrap(),
-                "-b", "100"
+                "--batch-size", "100",
+                "--buffer-size", "8192"
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -188,7 +189,8 @@ mod cli_tests {
                 "csv",
                 "-s", temp_file.path().to_str().unwrap(),
                 "-o", output_path.to_str().unwrap(),
-                "-b", "100"
+                "--batch-size", "100",
+                "--buffer-size", "8192"
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -218,10 +220,11 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "parquet",
-                "-s", temp_file.path().to_str().unwrap(),
-                "-o", output_path.to_str().unwrap(),
-                "-c", "snappy",
-                "-b", "100"
+                "--ssim-path", temp_file.path().to_str().unwrap(),
+                "--output-path", output_path.to_str().unwrap(),
+                "--compression", "snappy",
+                "--batch-size", "100",
+                "--buffer-size", "8192"
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -263,10 +266,11 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "parquet",
-                "-s", temp_file.path().to_str().unwrap(),
-                "-o", output_path.to_str().unwrap(),
-                "-c", "snappy",
-                "-b", "100"
+                "--ssim-path", temp_file.path().to_str().unwrap(),
+                "--output-path", output_path.to_str().unwrap(),
+                "--compression", "snappy",
+                "--batch-size", "100",
+                "--buffer-size", "8192"
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -307,7 +311,7 @@ mod cli_tests {
         // Test missing required arguments
         let output = Command::new(CLI_APP)
             .args(&["csv",
-                "-s", temp_file.path().to_str().unwrap()])
+                "--ssim-path", temp_file.path().to_str().unwrap()])
             .output()
             .expect("Failed to execute CLI command");
 
@@ -369,10 +373,11 @@ mod cli_tests {
             let output = Command::new(CLI_APP)
                 .args(&[
                     "parquet",
-                    "-s", temp_file.path().to_str().unwrap(),
-                    "-o", temp_dir.path().to_str().unwrap(),
-                    "-c", compression,
-                    "-b", "50"
+                    "--ssim-path", temp_file.path().to_str().unwrap(),
+                    "--output-path", temp_dir.path().to_str().unwrap(),
+                    "--compression", compression,
+                    "--batch-size", "50",
+                    "--buffer-size", "8192"
                 ])
                 .output()
                 .expect("Failed to execute CLI command");
@@ -411,8 +416,8 @@ mod cli_tests {
         let output = Command::new(&CLI_APP)
             .args(&[
                 "csv",
-                "-s", "nonexistent_file.ssim",
-                "-o", output_file.to_str().unwrap(),
+                "--ssim-path", "nonexistent_file.ssim",
+                "--output-path", output_file.to_str().unwrap(),
             ])
             .output()
             .expect("Failed to execute CLI command");

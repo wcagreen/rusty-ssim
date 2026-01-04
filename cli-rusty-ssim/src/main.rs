@@ -32,11 +32,11 @@ struct SsimParquetOptions {
     compression: String,
 
     /// Batch size for streaming.
-    #[arg(short, long, default_value = "10000")]
+    #[arg(long, default_value = "10000")]
     batch_size: usize,
 
     /// Buffer size for streaming.
-    #[arg(short, long, default_value = "8192")]
+    #[arg(long, default_value = "8192")]
     buffer_size: usize,
 }
 
@@ -51,11 +51,11 @@ struct SsimCsvOptions {
     output_path: String,
 
     /// Batch size for streaming.
-    #[arg(short, long, default_value = "10000")]
+    #[arg(long, default_value = "10000")]
     batch_size: usize,
 
     /// Buffer size for streaming.
-    #[arg(short, long, default_value = "8192")]
+    #[arg(long, default_value = "8192")]
     buffer_size: usize,
 }
 
