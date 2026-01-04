@@ -1,4 +1,4 @@
-use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
+use crate::converters::ssim_polars::combine_all_dataframes;
 use crate::generators::ssim_dataframe::convert_to_dataframes;
 use crate::utils::ssim_parser::{
     CarrierRecord, parse_carrier_record, parse_flight_record_legs, parse_segment_record
@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 const DEFAULT_BATCH_SIZE: usize = 10_000;
+const DEFAULT_BUFFER_SIZE: usize = 8 * 1024; // 8 KB
 
 /// Unified streaming SSIM reader that can output to memory or file
 pub struct StreamingSsimReader {
@@ -20,9 +21,9 @@ pub struct StreamingSsimReader {
 }
 
 impl StreamingSsimReader {
-    pub fn new(file_path: &str, batch_size: Option<usize>) -> std::io::Result<Self> {
+    pub fn new(file_path: &str, batch_size: Option<usize>, buffer_size: Option<usize>) -> std::io::Result<Self> {
         let file = File::open(file_path)?;
-        let reader = BufReader::new(file);
+        let reader = BufReader::with_capacity(buffer_size.unwrap_or(DEFAULT_BUFFER_SIZE), file);
 
         Ok(StreamingSsimReader {
             reader,
@@ -75,7 +76,8 @@ impl StreamingSsimReader {
                         self.line_buffer.pop();
                     }
                 }
-                Ok(Some(self.line_buffer.clone()))
+                let line = std::mem::take(&mut self.line_buffer);
+                Ok(Some(line))
             }
             Err(e) => Err(e),
         }
@@ -400,10 +402,8 @@ impl StreamingSsimReader {
             self.process_batch_with_persistent_carriers(flight_batch, segment_batch)?;
 
         // Combine carrier and flights
-        let mut combined_df = combine_carrier_and_flights(carrier_df, flight_df)?;
+        let combined_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
 
-        // Combine with segments
-        combined_df = combine_flights_and_segments(combined_df, segment_df)?;
 
         Ok(combined_df)
     }
@@ -426,9 +426,10 @@ fn concatenate_dataframes(mut existing: DataFrame, new: DataFrame) -> PolarsResu
 pub fn ssim_to_dataframes_streaming(
     file_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
     let mut reader =
-        StreamingSsimReader::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+        StreamingSsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
@@ -440,9 +441,10 @@ pub fn ssim_to_dataframes_streaming(
 pub fn ssim_to_dataframe_streaming(
     file_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PolarsResult<DataFrame> {
     let mut reader =
-        StreamingSsimReader::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+        StreamingSsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;

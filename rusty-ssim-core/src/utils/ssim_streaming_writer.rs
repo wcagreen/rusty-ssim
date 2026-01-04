@@ -1,4 +1,4 @@
-use crate::converters::ssim_polars::{combine_carrier_and_flights, combine_flights_and_segments};
+use crate::converters::ssim_polars::combine_all_dataframes;
 use crate::generators::ssim_dataframe::convert_to_dataframes;
 use crate::utils::ssim_exporters::to_parquet;
 use crate::utils::ssim_parser::{
@@ -10,6 +10,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 const DEFAULT_BATCH_SIZE: usize = 10_000;
+const DEFAULT_BUFFER_SIZE: usize = 8 * 1024; // 8 KB
 
 /// Enhanced streaming SSIM reader that writes incrementally to avoid memory issues
 pub struct EnhancedStreamingSsimWriter {
@@ -28,9 +29,9 @@ struct CsvWriterState {
 }
 
 impl EnhancedStreamingSsimWriter {
-    pub fn new(file_path: &str, batch_size: Option<usize>) -> std::io::Result<Self> {
+    pub fn new(file_path: &str, batch_size: Option<usize>, buffer_size: Option<usize>) -> std::io::Result<Self> {
         let file = File::open(file_path)?;
-        let reader = BufReader::new(file);
+        let reader = BufReader::with_capacity(buffer_size.unwrap_or(DEFAULT_BUFFER_SIZE), file);
 
         Ok(EnhancedStreamingSsimWriter {
             reader,
@@ -336,11 +337,8 @@ impl EnhancedStreamingSsimWriter {
             std::mem::take(segment_batch),
         )?;
 
-        // Combine carrier and flights
-        let mut combined_df = combine_carrier_and_flights(carrier_df, flight_df)?;
-
-        // Combine with segments
-        combined_df = combine_flights_and_segments(combined_df, segment_df)?;
+        // Combine carrier, flights, and segments
+        let combined_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
 
         Ok(combined_df)
     }
@@ -577,9 +575,10 @@ pub fn ssim_to_csv(
     file_path: &str,
     output_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PolarsResult<()> {
     let mut writer =
-        EnhancedStreamingSsimWriter::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+        EnhancedStreamingSsimWriter::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
@@ -594,9 +593,10 @@ pub fn ssim_to_parquets(
     output_path: Option<&str>,
     compression: Option<&str>,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PolarsResult<()> {
     let mut writer =
-        EnhancedStreamingSsimWriter::new(file_path, batch_size).map_err(|e| PolarsError::IO {
+        EnhancedStreamingSsimWriter::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;

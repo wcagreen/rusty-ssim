@@ -34,6 +34,10 @@ struct SsimParquetOptions {
     /// Batch size for streaming.
     #[arg(short, long, default_value = "10000")]
     batch_size: usize,
+
+    /// Buffer size for streaming.
+    #[arg(short, long, default_value = "8192")]
+    buffer_size: usize,
 }
 
 #[derive(Args)]
@@ -49,6 +53,10 @@ struct SsimCsvOptions {
     /// Batch size for streaming.
     #[arg(short, long, default_value = "10000")]
     batch_size: usize,
+
+    /// Buffer size for streaming.
+    #[arg(short, long, default_value = "8192")]
+    buffer_size: usize,
 }
 
 fn main() {
@@ -61,6 +69,7 @@ fn main() {
                 Some(options.output_path.as_str()),
                 Some(options.compression.as_str()),
                 Some(options.batch_size),
+                Some(options.buffer_size),
             )
             .expect("Failed to parse SSIM File to Parquet's.");
         }
@@ -70,6 +79,7 @@ fn main() {
                 &options.ssim_path,
                 &options.output_path,
                 Some(options.batch_size),
+                Some(options.buffer_size),
             )
             .expect("Failed to parse SSIM File to CSV.");
         }
