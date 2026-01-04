@@ -15,39 +15,42 @@ fn value_error(msg: String) -> PyErr {
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, output_path, batch_size=10000))]
+#[pyo3(signature = (file_path, output_path, batch_size=10000, buffer_size=8192))]
 fn parse_ssim_to_csv(
     py: Python<'_>,
     file_path: &str,
     output_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PyResult<()> {
-    py.allow_threads(|| ssim_to_csv(file_path, output_path, batch_size))
+    py.allow_threads(|| ssim_to_csv(file_path, output_path, batch_size, buffer_size))
         .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, output_path=".", compression="uncompressed", batch_size=10000))]
+#[pyo3(signature = (file_path, output_path=".", compression="uncompressed", batch_size=10000, buffer_size=8192))]
 fn parse_ssim_to_parquets(
     py: Python<'_>,
     file_path: &str,
     output_path: Option<&str>,
     compression: Option<&str>,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PyResult<()> {
-    py.allow_threads(|| ssim_to_parquets(file_path, output_path, compression, batch_size))
+    py.allow_threads(|| ssim_to_parquets(file_path, output_path, compression, batch_size, buffer_size))
         .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, batch_size=10000))]
+#[pyo3(signature = (file_path, batch_size=10000, buffer_size=8192))]
 fn split_ssim_to_dataframes(
     py: Python<'_>,
     file_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PyResult<(PyDataFrame, PyDataFrame, PyDataFrame)> {
     let (carrier_df, flights_df, segments_df) = py
-        .allow_threads(|| ssim_to_dataframes(file_path, batch_size))
+        .allow_threads(|| ssim_to_dataframes(file_path, batch_size, buffer_size))
         .map_err(|e| value_error(e.to_string()))?;
 
     Ok((
@@ -58,14 +61,15 @@ fn split_ssim_to_dataframes(
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, batch_size=10000))]
+#[pyo3(signature = (file_path, batch_size=10000, buffer_size=8192))]
 fn parse_ssim_to_dataframe(
     py: Python<'_>,
     file_path: &str,
     batch_size: Option<usize>,
+    buffer_size: Option<usize>,
 ) -> PyResult<PyDataFrame> {
     let ssim_dataframe = py
-        .allow_threads(|| ssim_to_dataframe(file_path, batch_size))
+        .allow_threads(|| ssim_to_dataframe(file_path, batch_size, buffer_size))
         .map_err(|e| value_error(e.to_string()))?;
 
     Ok(PyDataFrame(ssim_dataframe))
