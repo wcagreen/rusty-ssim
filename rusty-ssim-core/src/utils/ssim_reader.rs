@@ -306,15 +306,20 @@ impl SsimReader {
 // Utility Functions
 // ============================================================================
 
-fn concatenate_dataframes(mut existing: DataFrame, new: DataFrame) -> PolarsResult<DataFrame> {
-    if existing.is_empty() {
-        Ok(new)
-    } else if new.is_empty() {
-        Ok(existing)
-    } else {
-        existing.vstack_mut(&new)?;
-        Ok(existing)
+/// Concatenate a vector of DataFrames into a single DataFrame.
+/// Uses polars concat which is more efficient than repeated vstack_mut.
+fn concat_dataframes(dfs: Vec<DataFrame>) -> PolarsResult<DataFrame> {
+    if dfs.is_empty() {
+        return Ok(DataFrame::empty());
     }
+    if dfs.len() == 1 {
+        return dfs.into_iter().next().ok_or_else(|| 
+            PolarsError::ComputeError("Expected single DataFrame but found none".into())
+        );
+    }
+    // Convert to lazy, concat, then collect - more memory efficient
+    let lazy_frames: Vec<LazyFrame> = dfs.into_iter().map(|df| df.lazy()).collect();
+    concat(lazy_frames, UnionArgs::default())?.collect()
 }
 
 // ============================================================================
@@ -323,18 +328,20 @@ fn concatenate_dataframes(mut existing: DataFrame, new: DataFrame) -> PolarsResu
 
 /// Processor that accumulates all data into a single combined DataFrame.
 pub struct CombinedDataFrameProcessor {
-    result: DataFrame,
+    batches: Vec<DataFrame>,
+    result: Option<DataFrame>,
 }
 
 impl CombinedDataFrameProcessor {
     pub fn new() -> Self {
         Self {
-            result: DataFrame::empty(),
+            batches: Vec::new(),
+            result: None,
         }
     }
 
     pub fn into_result(self) -> DataFrame {
-        self.result
+        self.result.unwrap_or_else(DataFrame::empty)
     }
 }
 
@@ -358,11 +365,15 @@ impl BatchProcessor for CombinedDataFrameProcessor {
         )?;
 
         let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
-        self.result = concatenate_dataframes(std::mem::take(&mut self.result), batch_df)?;
+        if !batch_df.is_empty() {
+            self.batches.push(batch_df);
+        }
         Ok(())
     }
 
     fn finalize(&mut self) -> PolarsResult<()> {
+        let batches = std::mem::take(&mut self.batches);
+        self.result = Some(concat_dataframes(batches)?);
         Ok(())
     }
 }
@@ -373,24 +384,24 @@ impl BatchProcessor for CombinedDataFrameProcessor {
 
 /// Processor that accumulates into three separate DataFrames.
 pub struct SplitDataFrameProcessor {
-    carriers: DataFrame,
-    flights: DataFrame,
-    segments: DataFrame,
+    carrier_batches: Vec<DataFrame>,
+    flight_batches: Vec<DataFrame>,
+    segment_batches: Vec<DataFrame>,
+    result: Option<(DataFrame, DataFrame, DataFrame)>,
 }
 
 impl SplitDataFrameProcessor {
     pub fn new() -> Self {
         Self {
-            carriers: DataFrame::empty(),
-            flights: DataFrame::empty(),
-            segments: DataFrame::empty(),
+            carrier_batches: Vec::new(),
+            flight_batches: Vec::new(),
+            segment_batches: Vec::new(),
+            result: None,
         }
     }
 
-    pub fn into_result(mut self) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-        // Deduplicate carriers
-        self.carriers = self.carriers.unique_stable(None, UniqueKeepStrategy::First, None)?;
-        Ok((self.carriers, self.flights, self.segments))
+    pub fn into_result(self) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
+        self.result.ok_or_else(|| PolarsError::ComputeError("Processor not finalized".into()))
     }
 }
 
@@ -413,13 +424,27 @@ impl BatchProcessor for SplitDataFrameProcessor {
             segment_batch,
         )?;
 
-        self.carriers = concatenate_dataframes(std::mem::take(&mut self.carriers), carrier_df)?;
-        self.flights = concatenate_dataframes(std::mem::take(&mut self.flights), flight_df)?;
-        self.segments = concatenate_dataframes(std::mem::take(&mut self.segments), segment_df)?;
+        if !carrier_df.is_empty() {
+            self.carrier_batches.push(carrier_df);
+        }
+        if !flight_df.is_empty() {
+            self.flight_batches.push(flight_df);
+        }
+        if !segment_df.is_empty() {
+            self.segment_batches.push(segment_df);
+        }
         Ok(())
     }
 
     fn finalize(&mut self) -> PolarsResult<()> {
+        let carriers = concat_dataframes(std::mem::take(&mut self.carrier_batches))?;
+        let flights = concat_dataframes(std::mem::take(&mut self.flight_batches))?;
+        let segments = concat_dataframes(std::mem::take(&mut self.segment_batches))?;
+        
+        // Deduplicate carriers
+        let carriers = carriers.unique_stable(None, UniqueKeepStrategy::First, None)?;
+        
+        self.result = Some((carriers, flights, segments));
         Ok(())
     }
 }
@@ -549,7 +574,7 @@ impl BatchProcessor for CsvWriterProcessor {
 pub struct ParquetWriterProcessor {
     output_path: String,
     compression: String,
-    accumulated_df: DataFrame,
+    accumulated_batches: Vec<DataFrame>,
     current_carrier: Option<CarrierRecord>,
 }
 
@@ -577,7 +602,7 @@ impl ParquetWriterProcessor {
         Ok(Self {
             output_path: output_path.to_string(),
             compression: compression.unwrap_or("uncompressed").to_string(),
-            accumulated_df: DataFrame::empty(),
+            accumulated_batches: Vec::new(),
             current_carrier: None,
         })
     }
@@ -603,7 +628,7 @@ impl ParquetWriterProcessor {
     }
 
     fn write_accumulated(&mut self) -> PolarsResult<()> {
-        if self.accumulated_df.is_empty() {
+        if self.accumulated_batches.is_empty() {
             return Ok(());
         }
 
@@ -613,13 +638,15 @@ impl ParquetWriterProcessor {
         let filename = self.build_filename(carrier);
         let file_path: PathBuf = Path::new(&self.output_path).join(filename);
 
+        // Concat all batches for this carrier
+        let mut combined_df = concat_dataframes(std::mem::take(&mut self.accumulated_batches))?;
+
         to_parquet(
-            &mut self.accumulated_df,
+            &mut combined_df,
             file_path.to_str().expect("Invalid file path"),
             &self.compression,
         )?;
 
-        self.accumulated_df = DataFrame::empty();
         Ok(())
     }
 }
@@ -643,10 +670,9 @@ impl BatchProcessor for ParquetWriterProcessor {
         )?;
 
         let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
-        self.accumulated_df = concatenate_dataframes(
-            std::mem::take(&mut self.accumulated_df),
-            batch_df,
-        )?;
+        if !batch_df.is_empty() {
+            self.accumulated_batches.push(batch_df);
+        }
         Ok(())
     }
 
