@@ -453,9 +453,9 @@ impl BatchProcessor for SplitDataFrameProcessor {
 // Processor: CSV Writer (streaming append)
 // ============================================================================
 
-/// Processor that writes batches to CSV incrementally.
+/// Processor that writes batches to CSV incrementally using Polars directly.
 pub struct CsvWriterProcessor {
-    writer: csv::Writer<File>,
+    file: File,
     headers_written: bool,
 }
 
@@ -474,12 +474,8 @@ impl CsvWriterProcessor {
                 msg: Some(format!("Unable to open file {}", output_path).into()),
             })?;
 
-        let writer = csv::WriterBuilder::new()
-            .has_headers(false)
-            .from_writer(file);
-
         Ok(Self {
-            writer,
+            file,
             headers_written: file_exists,
         })
     }
@@ -496,50 +492,12 @@ impl CsvWriterProcessor {
     }
 
     fn write_dataframe(&mut self, mut df: DataFrame) -> PolarsResult<()> {
-        // Write headers if needed
-        if !self.headers_written {
-            let headers: Vec<String> = df
-                .get_column_names()
-                .iter()
-                .map(|s| s.to_string())
-                .collect();
-
-            self.writer
-                .write_record(&headers)
-                .map_err(|e| PolarsError::IO {
-                    error: Arc::from(std::io::Error::new(std::io::ErrorKind::Other, e)),
-                    msg: Some("Failed to write CSV headers".into()),
-                })?;
-
-            self.headers_written = true;
-        }
-
-        // Convert DataFrame to CSV
-        let mut csv_buffer = Vec::new();
-        CsvWriter::new(&mut csv_buffer)
-            .include_header(false)
+        // Write directly to file using Polars CsvWriter - no intermediate buffer
+        CsvWriter::new(&mut self.file)
+            .include_header(!self.headers_written)
             .finish(&mut df)?;
 
-        let csv_string = String::from_utf8(csv_buffer).map_err(|e| {
-            PolarsError::ComputeError(format!("UTF-8 conversion error: {}", e).into())
-        })?;
-
-        for line in csv_string.lines() {
-            if !line.is_empty() {
-                self.writer
-                    .write_record(line.split(','))
-                    .map_err(|e| PolarsError::IO {
-                        error: Arc::from(std::io::Error::new(std::io::ErrorKind::Other, e)),
-                        msg: Some("Failed to write CSV record".into()),
-                    })?;
-            }
-        }
-
-        self.writer.flush().map_err(|e| PolarsError::IO {
-            error: Arc::from(e),
-            msg: None,
-        })?;
-
+        self.headers_written = true;
         Ok(())
     }
 }
