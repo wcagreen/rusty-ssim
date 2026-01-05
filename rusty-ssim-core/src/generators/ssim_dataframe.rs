@@ -3,8 +3,8 @@ use polars::prelude::*;
 
 pub fn convert_to_dataframes(
     carrier: Option<CarrierRecord>,
-    flights: Vec<FlightLegRecord>,
-    segments: Vec<SegmentRecords>,
+    flights: Vec<FlightLegRecord<'_>>,
+    segments: Vec<SegmentRecords<'_>>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
     let carriers = carrier.into_iter().collect::<Vec<_>>();
     let carrier_df = if !carriers.is_empty() {

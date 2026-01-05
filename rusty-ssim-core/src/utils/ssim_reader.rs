@@ -40,8 +40,8 @@ pub trait BatchProcessor {
     /// Called when batch size is reached or carrier changes.
     fn process_batch(
         &mut self,
-        flight_batch: Vec<FlightLegRecord>,
-        segment_batch: Vec<SegmentRecords>,
+        flight_batch: Vec<FlightLegRecord<'_>>,
+        segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()>;
 
@@ -192,14 +192,16 @@ impl SsimReader {
                         Some('5') => {
                             if !flight_lines.is_empty() || !segment_lines.is_empty() {
                                 let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                                    std::mem::take(&mut flight_lines),
-                                    std::mem::take(&mut segment_lines),
+                                    &flight_lines,
+                                    &segment_lines,
                                 );
                                 processor.process_batch(
                                     flight_batch,
                                     segment_batch,
                                     self.persistent_carriers.as_ref(),
                                 )?;
+                                flight_lines.clear();
+                                segment_lines.clear();
                             }
                             // Notify processor that carrier section is complete
                             processor.on_carrier_complete(self.persistent_carriers.as_ref())?;
@@ -215,14 +217,16 @@ impl SsimReader {
                         Ok(should_continue) => {
                             if !should_continue {
                                 let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                                    std::mem::take(&mut flight_lines),
-                                    std::mem::take(&mut segment_lines),
+                                    &flight_lines,
+                                    &segment_lines,
                                 );
                                 processor.process_batch(
                                     flight_batch,
                                     segment_batch,
                                     self.persistent_carriers.as_ref(),
                                 )?;
+                                flight_lines.clear();
+                                segment_lines.clear();
                             }
                         }
                         Err(e) => {
@@ -245,8 +249,8 @@ impl SsimReader {
 
         if !flight_lines.is_empty() || !segment_lines.is_empty() {
             let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                std::mem::take(&mut flight_lines),
-                std::mem::take(&mut segment_lines),
+                &flight_lines,
+                &segment_lines,
             );
             processor.process_batch(
                 flight_batch,
@@ -263,11 +267,11 @@ impl SsimReader {
     /// 
     /// This is the hot path - parsing string slices into records is CPU-bound
     /// and benefits significantly from parallelization.
-    fn parse_lines_parallel(
+    fn parse_lines_parallel<'a>(
         &self,
-        flight_lines: Vec<String>,
-        segment_lines: Vec<String>,
-    ) -> (Vec<FlightLegRecord>, Vec<SegmentRecords>) {
+        flight_lines: &'a [String],
+        segment_lines: &'a [String],
+    ) -> (Vec<FlightLegRecord<'a>>, Vec<SegmentRecords<'a>>) {
         let carrier = self.persistent_carriers.as_ref();
         
         // Parse flights and segments in parallel
@@ -343,8 +347,8 @@ impl Default for CombinedDataFrameProcessor {
 impl BatchProcessor for CombinedDataFrameProcessor {
     fn process_batch(
         &mut self,
-        flight_batch: Vec<FlightLegRecord>,
-        segment_batch: Vec<SegmentRecords>,
+        flight_batch: Vec<FlightLegRecord<'_>>,
+        segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
@@ -399,8 +403,8 @@ impl Default for SplitDataFrameProcessor {
 impl BatchProcessor for SplitDataFrameProcessor {
     fn process_batch(
         &mut self,
-        flight_batch: Vec<FlightLegRecord>,
-        segment_batch: Vec<SegmentRecords>,
+        flight_batch: Vec<FlightLegRecord<'_>>,
+        segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
@@ -518,8 +522,8 @@ impl CsvWriterProcessor {
 impl BatchProcessor for CsvWriterProcessor {
     fn process_batch(
         &mut self,
-        flight_batch: Vec<FlightLegRecord>,
-        segment_batch: Vec<SegmentRecords>,
+        flight_batch: Vec<FlightLegRecord<'_>>,
+        segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
@@ -623,8 +627,8 @@ impl ParquetWriterProcessor {
 impl BatchProcessor for ParquetWriterProcessor {
     fn process_batch(
         &mut self,
-        flight_batch: Vec<FlightLegRecord>,
-        segment_batch: Vec<SegmentRecords>,
+        flight_batch: Vec<FlightLegRecord<'_>>,
+        segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         // Store carrier for filename generation
