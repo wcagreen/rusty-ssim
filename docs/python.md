@@ -29,13 +29,15 @@ Parse an SSIM file into a single Polars DataFrame containing all record types (c
 ```python
 def parse_ssim_to_dataframe(
     file_path: str,
-    batch_size: int = 10000
+    batch_size: int = 10000,
+    buffer_size: int = 8192
 ) -> pl.DataFrame
 ```
 
 **Parameters:**
 - **file_path** (str): Path to the SSIM file to parse
 - **batch_size** (int, optional): Number of records to process in each batch for memory efficiency. Defaults to 10,000
+- **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
 
 **Returns:**
 - **polars.DataFrame**: Combined DataFrame containing all flight schedule data with the following key columns:
@@ -57,6 +59,13 @@ print(f"American Airlines has {len(aa_flights)} scheduled flights")
 # Memory-optimized processing for large files
 df = rs.parse_ssim_to_dataframe("./data/large_schedule.ssim", batch_size=5000)
 
+# Performance-optimized processing with larger buffer
+df = rs.parse_ssim_to_dataframe(
+    "./data/large_schedule.ssim",
+    batch_size=50000,
+    buffer_size=65536  # 64KB buffer for better I/O performance
+)
+
 # To convert to pandas.
 pandas_df = df.to_pandas()
 ```
@@ -71,13 +80,15 @@ Parse an SSIM file into three separate DataFrames for carriers, flights, and seg
 ```python
 def split_ssim_to_dataframes(
     file_path: str,
-    batch_size: int = 10000
+    batch_size: int = 10000,
+    buffer_size: int = 8192
 ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
 ```
 
 **Parameters:**
 - **file_path** (str): Path to the SSIM file to parse
 - **batch_size** (int, optional): Batch size for streaming processing. Defaults to 10,000
+- **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
 
 **Returns:**
 - **tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]**: Three separate DataFrames:
@@ -118,7 +129,8 @@ Parse an SSIM file and write the results directly to a CSV file without loading 
 def parse_ssim_to_csv(
     file_path: str,
     output_path: str,
-    batch_size: int = 10000
+    batch_size: int = 10000,
+    buffer_size: int = 8192
 ) -> None
 ```
 
@@ -126,6 +138,7 @@ def parse_ssim_to_csv(
 - **file_path** (str): Path to the input SSIM file
 - **output_path** (str): Path where the output CSV file will be created
 - **batch_size** (int, optional): Batch size for streaming processing. Defaults to 10,000
+- **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
 
 **Returns:**
 - **None**: Function writes directly to file
@@ -145,7 +158,8 @@ rs.parse_ssim_to_csv(
 rs.parse_ssim_to_csv(
     file_path="./data/large_schedule.ssim",
     output_path="./output/large_schedule.csv",
-    batch_size=50000
+    batch_size=50000,
+    buffer_size=65536  # 64KB buffer for better I/O throughput
 )
 
 # Verify the output
@@ -163,7 +177,8 @@ def parse_ssim_to_parquets(
     file_path: str,
     output_path: str = ".",
     compression: str = "uncompressed",
-    batch_size: int = 10000
+    batch_size: int = 10000,
+    buffer_size: int = 8192
 ) -> None
 ```
 
@@ -173,6 +188,7 @@ def parse_ssim_to_parquets(
 - **compression** (str, optional): Parquet compression algorithm. Defaults to "uncompressed"
   - **Available options**: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - **batch_size** (int, optional): Batch size for streaming processing. Defaults to 10,000
+- **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
 
 **Returns:**
 - **None**: Function creates separate `.parquet` files for each airline
@@ -249,7 +265,8 @@ rs.parse_ssim_to_parquets(
     file_path=input_file,
     output_path=output_dir,
     compression="lz4",  
-    batch_size=100000   
+    batch_size=100000,
+    buffer_size=131072  # 128KB buffer for maximum throughput
 )
 
 print("Processing complete. Files created:")

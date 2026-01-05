@@ -69,7 +69,8 @@ ssim csv [OPTIONS]
 
 #### Options
 - **`--output-path, -o`** `<FILE>`: Output CSV file path *(required)*
-- **`--batch-size, -b`** `<NUMBER>`: Records to process per batch (default: 10,000)
+- **`--batch-size`** `<NUMBER>`: Records to process per batch (default: 10,000)
+- **`--buffer-size`** `<NUMBER>`: I/O buffer size in bytes (default: 8,192)
 - **`--help, -h`**: Show help for this command
 
 #### Examples
@@ -78,7 +79,10 @@ ssim csv [OPTIONS]
 ssim csv -s ./data/schedule.ssim -o ./output/parsed_schedule.csv
 
 # Process large file with custom batch size
-ssim csv -s ./data/large_schedule.ssim -o ./output/large.csv -b 50000
+ssim csv -s ./data/large_schedule.ssim -o ./output/large.csv --batch-size 50000
+
+# Optimize I/O performance with larger buffer
+ssim csv -s ./data/large_schedule.ssim -o ./output/large.csv --batch-size 50000 --buffer-size 65536
 
 # Using full argument names
 ssim csv --ssim-path ./data/schedule.ssim --output-path ./output/schedule.csv --batch-size 25000
@@ -101,7 +105,8 @@ ssim parquet [OPTIONS]
 #### Options
 - **`--output-path, -o`** `<DIRECTORY>`: Output directory path (default: current directory)
 - **`--compression, -c`** `<TYPE>`: Compression algorithm (default: "uncompressed")
-- **`--batch-size, -b`** `<NUMBER>`: Records to process per batch (default: 10,000)
+- **`--batch-size`** `<NUMBER>`: Records to process per batch (default: 10,000)
+- **`--buffer-size`** `<NUMBER>`: I/O buffer size in bytes (default: 8,192)
 - **`--help, -h`**: Show help for this command
 
 #### Compression Options
@@ -127,10 +132,10 @@ ssim parquet -s ./data/schedule.ssim -o ./parquet_output
 ssim parquet -s ./data/schedule.ssim -o ./output -c zstd
 
 # Optimize for large file processing
-ssim parquet -s ./data/huge_schedule.ssim -o ./output -c lz4 -b 100000
+ssim parquet -s ./data/huge_schedule.ssim -o ./output -c lz4 --batch-size 100000 --buffer-size 131072
 
 # Maximum compression for archival
-ssim parquet -s ./data/schedule.ssim -o ./archive -c brotli -b 25000
+ssim parquet -s ./data/schedule.ssim -o ./archive -c brotli --batch-size 25000
 ```
 
 #### Output Format
@@ -149,16 +154,34 @@ Choose batch size based on your file size and available memory:
 
 ```bash
 # Small files (< 100MB)
-ssim csv -s small.ssim -o output.csv -b 10000
+ssim csv -s small.ssim -o output.csv --batch-size 10000
 
 # Medium files (100MB - 1GB) 
-ssim csv -s medium.ssim -o output.csv -b 50000
+ssim csv -s medium.ssim -o output.csv --batch-size 50000
 
 # Large files (> 1GB)
-ssim csv -s large.ssim -o output.csv -b 100000
+ssim csv -s large.ssim -o output.csv --batch-size 100000
 
 # Memory-constrained systems
-ssim csv -s any_size.ssim -o output.csv -b 5000
+ssim csv -s any_size.ssim -o output.csv --batch-size 5000
+```
+
+### Buffer Size Optimization
+
+Tune I/O buffer size for better throughput on large files:
+
+```bash
+# Default (8KB) - Good for most files
+ssim csv -s schedule.ssim -o output.csv
+
+# Medium buffer (64KB) - Better for large files
+ssim csv -s large.ssim -o output.csv --buffer-size 65536
+
+# Large buffer (128KB) - Maximum throughput
+ssim parquet -s huge.ssim -o ./output -c lz4 --buffer-size 131072
+
+# Combined optimization for very large files
+ssim parquet -s huge.ssim -o ./output -c lz4 --batch-size 100000 --buffer-size 131072
 ```
 
 ### Format Selection Guide
@@ -200,16 +223,19 @@ ssim parquet -s schedule.ssim -o ./output
 **Out of memory with large files:**
 ```bash
 # Reduce batch size
-ssim csv -s large_file.ssim -o output.csv -b 5000
+ssim csv -s large_file.ssim -o output.csv --batch-size 5000
 
 # Or use parquet format (more memory efficient)
-ssim parquet -s large_file.ssim -o ./output -c lz4 -b 10000
+ssim parquet -s large_file.ssim -o ./output -c lz4 --batch-size 10000
 ```
 
 **Slow processing:**
 ```bash
 # Increase batch size (if you have enough memory)
-ssim csv -s file.ssim -o output.csv -b 100000
+ssim csv -s file.ssim -o output.csv --batch-size 100000
+
+# Increase buffer size for better I/O throughput
+ssim csv -s file.ssim -o output.csv --batch-size 50000 --buffer-size 65536
 
 # Use faster compression
 ssim parquet -s file.ssim -o ./output -c lz4

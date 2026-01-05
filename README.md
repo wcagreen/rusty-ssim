@@ -9,7 +9,8 @@ A high-performance Rust-built IATA SSIM (Standard Schedules Information Manual) 
 
 ## Features
 
-- **🚀 Fast Performance**: Built in Rust for optimal parsing speed
+- **🚀 Fast Performance**: Built in Rust for optimal parsing speed with parallel processing capabilities
+- **⚡ Parallel Processing**: Leverages multi-core CPUs to process large SSIM files efficiently
 - **💾 Memory Efficient**: Optimize for large SSIM files  
 - **📊 Multiple Output Formats**: CSV, Parquet, and in-memory DataFrames
 - **🗜️ Flexible Compression**: Support for various Parquet compression options (zstd, lz4, snappy, etc.)
