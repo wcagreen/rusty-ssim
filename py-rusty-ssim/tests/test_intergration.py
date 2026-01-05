@@ -19,11 +19,17 @@ def multi_ssim_content_generator(flight_count=1000, ivi_count=10):
         "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001"
     ]
 
-    carriers = ["XX", "YY", "ZZ"]
+    carriers = [["XX", " "], ["YY", "X"], ["YY", " "], ["ZZ", " "]]
 
     for carrier in carriers:
         lines.append(
-            f"2U{carrier}  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002"
+            (
+                f"2U{carrier[0]}  0008S18 25MAR1827OCT1813OCT17                                    P"
+                f"{' ' * (107 - len(f'2U{carrier[0]}  0008S18 25MAR1827OCT1813OCT17                                    P'))}"
+                f"{carrier[1]}"
+                f"{' ' * (200 - 108 - len('1301000002'))}"
+                "1301000002"
+            )
         )
 
         for flight_idx in range(flight_count):
@@ -180,11 +186,10 @@ def test_multiple_carriers(temp_multi_ssim_file):
         temp_multi_ssim_file
     )
 
-    unique_carriers = carrier_df["airline_designator"].unique().to_list()
-    assert len(unique_carriers) == 3
-
-    assert len(flights_df) == 3000
-    assert len(segments_df) == 6000
+    unique_carriers = carrier_df[["airline_designator", "control_duplicate_indicator"]].unique()
+    assert len(unique_carriers) == 4
+    assert len(flights_df) == 4000
+    assert len(segments_df) == 8000
 
 
 def test_parse_ssim_to_csv(temp_ssim_file):

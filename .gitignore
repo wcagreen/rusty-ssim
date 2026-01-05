@@ -41,3 +41,5 @@ target/
 *.pyd
 __pycache__
 *.pyc
+
+uv.lock
