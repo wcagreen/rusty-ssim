@@ -359,7 +359,7 @@ impl BatchProcessor for CombinedDataFrameProcessor {
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier.cloned(),
+            carrier,
             flight_batch,
             segment_batch,
         )?;
@@ -419,7 +419,7 @@ impl BatchProcessor for SplitDataFrameProcessor {
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier.cloned(),
+            carrier,
             flight_batch,
             segment_batch,
         )?;
@@ -552,7 +552,7 @@ impl BatchProcessor for CsvWriterProcessor {
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier.cloned(),
+            carrier,
             flight_batch,
             segment_batch,
         )?;
@@ -658,13 +658,13 @@ impl BatchProcessor for ParquetWriterProcessor {
         segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
-        // Store carrier for filename generation
+        // Store carrier for filename generation (requires clone)
         if let Some(c) = carrier {
             self.current_carrier = Some(c.clone());
         }
 
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier.cloned(),
+            carrier,
             flight_batch,
             segment_batch,
         )?;
