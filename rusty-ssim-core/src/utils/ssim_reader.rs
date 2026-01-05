@@ -533,7 +533,8 @@ pub struct ParquetWriterProcessor {
     output_path: String,
     compression: String,
     accumulated_batches: Vec<DataFrame>,
-    current_carrier: Option<CarrierRecord>,
+    /// Stores (airline_designator, control_duplicate_indicator) for filename generation
+    current_carrier_info: Option<(String, String)>,
 }
 
 impl ParquetWriterProcessor {
@@ -561,13 +562,13 @@ impl ParquetWriterProcessor {
             output_path: output_path.to_string(),
             compression: compression.unwrap_or("uncompressed").to_string(),
             accumulated_batches: Vec::new(),
-            current_carrier: None,
+            current_carrier_info: None,
         })
     }
 
-    fn build_filename(&self, carrier: &CarrierRecord) -> String {
-        let airline = carrier.airline_designator.trim();
-        let control = carrier.control_duplicate_indicator.trim();
+    fn build_filename(&self, airline: &str, control: &str) -> String {
+        let airline = airline.trim();
+        let control = control.trim();
 
         let carrier_name = if !airline.is_empty() && !control.is_empty() {
             format!("{}_{}", airline, control)
@@ -590,10 +591,10 @@ impl ParquetWriterProcessor {
             return Ok(());
         }
 
-        let carrier = self.current_carrier.as_ref()
-            .ok_or_else(|| PolarsError::ComputeError("No carrier for parquet file".into()))?;
+        let (airline, control) = self.current_carrier_info.as_ref()
+            .ok_or_else(|| PolarsError::ComputeError("No carrier info for parquet file".into()))?;
 
-        let filename = self.build_filename(carrier);
+        let filename = self.build_filename(airline, control);
         let file_path: PathBuf = Path::new(&self.output_path).join(filename);
 
         // Concat all batches for this carrier
@@ -616,9 +617,12 @@ impl BatchProcessor for ParquetWriterProcessor {
         segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
-        // Store carrier for filename generation (requires clone)
+        // Store only the fields needed for filename generation (avoids cloning entire CarrierRecord)
         if let Some(c) = carrier {
-            self.current_carrier = Some(c.clone());
+            self.current_carrier_info = Some((
+                c.airline_designator.clone(),
+                c.control_duplicate_indicator.clone(),
+            ));
         }
 
         let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
@@ -636,7 +640,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 
     fn on_carrier_complete(&mut self, _carrier: Option<&CarrierRecord>) -> PolarsResult<()> {
         self.write_accumulated()?;
-        self.current_carrier = None;
+        self.current_carrier_info = None;
         Ok(())
     }
 
