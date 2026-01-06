@@ -11,6 +11,6 @@ repository = "https://github.com/wcagreen/rusty-ssim"
 
 
 [workspace.dependencies]
-polars = { version = "0.50.0", features = ["lazy", "parquet", "dtype-struct", "ipc", "performant"] }
+polars = { version = "0.50.0", features = ["lazy", "parquet", "dtype-struct", "ipc", "performant", "json"] }
 serde = "1.0.218"
 rusty-ssim-core = { version = "0.4.0", path="./rusty-ssim-core"}

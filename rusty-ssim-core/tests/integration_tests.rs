@@ -143,7 +143,7 @@ mod integration_tests {
     fn test_ssim_to_dataframe_success() {
         let (file_path, _temp_dir) = create_temp_ssim_file(10, 2);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrame: {:?}",
@@ -202,7 +202,7 @@ mod integration_tests {
     fn test_multi_carrier_ssim_to_dataframe_success() {
         let (file_path, _temp_dir) = create_temp_multi_ssim_file(10, 2);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrame: {:?}",
@@ -243,7 +243,7 @@ mod integration_tests {
         let output_path = temp_dir.path().join("output.csv");
         let output_path_str = output_path.to_str().unwrap();
 
-        let result = ssim_to_csv(&file_path, output_path_str, Some(1000), Some(8192));
+        let result = ssim_to_csv(&file_path, output_path_str, Some(1000), Some(8192), Some(false));
         assert!(
             result.is_ok(),
             "Failed to write SSIM to CSV: {:?}",
@@ -267,7 +267,7 @@ mod integration_tests {
 
         let output_path = temp_dir.path().to_str().unwrap();
 
-        let result = ssim_to_parquets(&file_path, Some(output_path), Some("snappy"), Some(1000), Some(8192));
+        let result = ssim_to_parquets(&file_path, Some(output_path), Some("snappy"), Some(1000), Some(8192), Some(false));
         assert!(
             result.is_ok(),
             "Failed to write SSIM to Parquet: {:?}",
@@ -307,7 +307,7 @@ mod integration_tests {
     fn test_minimal_ssim_data() {
         let (file_path, _temp_dir) = create_temp_ssim_file(2, 1);
 
-        let result = ssim_to_dataframe(&file_path, Some(100), Some(8192));
+        let result = ssim_to_dataframe(&file_path, Some(100), Some(8192), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse minimal SSIM data: {:?}",
@@ -320,7 +320,7 @@ mod integration_tests {
 
     #[test]
     fn test_nonexistent_file() {
-        let result = ssim_to_dataframe("nonexistent_file.ssim", Some(100), Some(8192));
+        let result = ssim_to_dataframe("nonexistent_file.ssim", Some(100), Some(8192), Some(false));
         assert!(result.is_err(), "Should fail when file doesn't exist");
 
         if let Err(e) = result {
@@ -334,7 +334,7 @@ mod integration_tests {
 
         // Test with different batch sizes
         for batch_size in [1000, 5000, 10000, 15000] {
-            let result = ssim_to_dataframe(&file_path, Some(batch_size), Some(8192));
+            let result = ssim_to_dataframe(&file_path, Some(batch_size), Some(8192), Some(false));
             assert!(
                 result.is_ok(),
                 "Failed with batch size {}: {:?}",
@@ -361,7 +361,7 @@ mod integration_tests {
             let output_path = temp_dir.path().to_str().unwrap();
 
             let result =
-                ssim_to_parquets(&file_path, Some(output_path), Some(compression), Some(100), Some(8192));
+                ssim_to_parquets(&file_path, Some(output_path), Some(compression), Some(100), Some(8192), Some(false));
             assert!(
                 result.is_ok(),
                 "Failed with compression {}: {:?}",
@@ -398,6 +398,27 @@ mod integration_tests {
             );
         }
     }
+
+    #[test]
+    fn test_condense_segments() {
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 5);
+
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(true));
+        assert!(
+            result.is_ok(),
+            "Failed to parse SSIM with condensed segments: {:?}",
+            result.err()
+        );
+
+        let df = result.unwrap();
+        println!(
+            "Condensed segments DataFrame shape: {:?}",
+            df.shape()
+        );
+
+        // Check that the segment_data column exists
+        assert_eq!(df.get_column_names().len(), 58);
+    }
 }
 
 #[cfg(test)]
@@ -410,7 +431,7 @@ mod performance_tests {
         let (file_path, _temp_dir) = create_temp_ssim_file(5000, 20);
 
         let start = Instant::now();
-        let result = ssim_to_dataframe(&file_path, Some(100000), Some(8192));
+        let result = ssim_to_dataframe(&file_path, Some(100000), Some(8192), Some(false));
         let duration = start.elapsed();
 
         assert!(
@@ -429,3 +450,4 @@ mod performance_tests {
         );
     }
 }
+

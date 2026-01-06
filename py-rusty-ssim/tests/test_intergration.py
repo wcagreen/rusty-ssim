@@ -140,6 +140,16 @@ def test_parse_ssim_to_dataframe(temp_ssim_file):
     assert "airline_designator" in df.columns
     assert "flight_number" in df.columns
 
+def test_parse_ssim_to_dataframe_condense_segments(temp_ssim_file):
+    """Test parsing SSIM to single DataFrame with condense_segments=True"""
+    df = rustyssim.parse_ssim_to_dataframe(temp_ssim_file, condense_segments=True)
+
+    assert isinstance(df, pl.DataFrame)
+    assert len(df) > 0
+    assert "airline_designator" in df.columns
+    assert "flight_number" in df.columns
+    assert len(df.columns) == 58
+
 
 def test_parse_ssim_to_dataframe_with_batch_size(temp_ssim_file):
     """Test parsing with custom batch size"""
