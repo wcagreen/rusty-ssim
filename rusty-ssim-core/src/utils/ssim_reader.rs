@@ -330,13 +330,15 @@ fn concat_dataframes(dfs: Vec<DataFrame>) -> PolarsResult<DataFrame> {
 pub struct CombinedDataFrameProcessor {
     batches: Vec<DataFrame>,
     result: Option<DataFrame>,
+    condense_segments: bool,
 }
 
 impl CombinedDataFrameProcessor {
-    pub fn new() -> Self {
+    pub fn new(condense_segments: bool) -> Self {
         Self {
             batches: Vec::new(),
             result: None,
+            condense_segments,
         }
     }
 
@@ -347,7 +349,7 @@ impl CombinedDataFrameProcessor {
 
 impl Default for CombinedDataFrameProcessor {
     fn default() -> Self {
-        Self::new()
+        Self::new(false)
     }
 }
 
@@ -364,7 +366,7 @@ impl BatchProcessor for CombinedDataFrameProcessor {
             segment_batch,
         )?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
+        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if !batch_df.is_empty() {
             self.batches.push(batch_df);
         }
@@ -457,10 +459,11 @@ impl BatchProcessor for SplitDataFrameProcessor {
 pub struct CsvWriterProcessor {
     file: File,
     headers_written: bool,
+    condense_segments: bool,
 }
 
 impl CsvWriterProcessor {
-    pub fn new(output_path: &str) -> PolarsResult<Self> {
+    pub fn new(output_path: &str, condense_segments: bool) -> PolarsResult<Self> {
         Self::ensure_directory_exists(output_path)?;
 
         let file_exists = Path::new(output_path).exists();
@@ -477,6 +480,7 @@ impl CsvWriterProcessor {
         Ok(Self {
             file,
             headers_written: file_exists,
+            condense_segments,
         })
     }
 
@@ -515,7 +519,7 @@ impl BatchProcessor for CsvWriterProcessor {
             segment_batch,
         )?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
+        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         self.write_dataframe(batch_df)
     }
 
@@ -535,10 +539,11 @@ pub struct ParquetWriterProcessor {
     accumulated_batches: Vec<DataFrame>,
     /// Stores (airline_designator, control_duplicate_indicator) for filename generation
     current_carrier_info: Option<(String, String)>,
+    condense_segments: bool,
 }
 
 impl ParquetWriterProcessor {
-    pub fn new(output_path: &str, compression: Option<&str>) -> PolarsResult<Self> {
+    pub fn new(output_path: &str, compression: Option<&str>, condense_segments: bool) -> PolarsResult<Self> {
         let path = Path::new(output_path);
 
         if path.extension().is_some() {
@@ -563,6 +568,7 @@ impl ParquetWriterProcessor {
             compression: compression.unwrap_or("uncompressed").to_string(),
             accumulated_batches: Vec::new(),
             current_carrier_info: None,
+            condense_segments,
         })
     }
 
@@ -631,7 +637,7 @@ impl BatchProcessor for ParquetWriterProcessor {
             segment_batch,
         )?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df)?;
+        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if !batch_df.is_empty() {
             self.accumulated_batches.push(batch_df);
         }
@@ -654,10 +660,18 @@ impl BatchProcessor for ParquetWriterProcessor {
 // ============================================================================
 
 /// Parse SSIM file into a single combined DataFrame.
+/// 
+/// # Arguments
+/// * `file_path` - Path to the SSIM file
+/// * `batch_size` - Optional batch size for processing
+/// * `buffer_size` - Optional buffer size for reading
+/// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller output).
+///   If false (default), each segment is a separate row.
 pub fn ssim_to_dataframe(
     file_path: &str,
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
+    condense_segments: Option<bool>,
 ) -> PolarsResult<DataFrame> {
     let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
         .map_err(|e| PolarsError::IO {
@@ -665,7 +679,7 @@ pub fn ssim_to_dataframe(
             msg: None,
         })?;
 
-    let mut processor = CombinedDataFrameProcessor::new();
+    let mut processor = CombinedDataFrameProcessor::new(condense_segments.unwrap_or(false));
     reader.process(&mut processor)?;
     Ok(processor.into_result())
 }
@@ -688,11 +702,20 @@ pub fn ssim_to_dataframes(
 }
 
 /// Parse SSIM file and write to CSV (streaming).
+/// 
+/// # Arguments
+/// * `file_path` - Path to the SSIM file
+/// * `output_path` - Path for the output CSV file
+/// * `batch_size` - Optional batch size for processing
+/// * `buffer_size` - Optional buffer size for reading
+/// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller file).
+///   If false (default), each segment is a separate row.
 pub fn ssim_to_csv(
     file_path: &str,
     output_path: &str,
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
+    condense_segments: Option<bool>,
 ) -> PolarsResult<()> {
     let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
         .map_err(|e| PolarsError::IO {
@@ -700,17 +723,27 @@ pub fn ssim_to_csv(
             msg: None,
         })?;
 
-    let mut processor = CsvWriterProcessor::new(output_path)?;
+    let mut processor = CsvWriterProcessor::new(output_path, condense_segments.unwrap_or(false))?;
     reader.process(&mut processor)
 }
 
 /// Parse SSIM file and write to Parquet files (one per carrier).
+/// 
+/// # Arguments
+/// * `file_path` - Path to the SSIM file
+/// * `output_path` - Optional output directory path
+/// * `compression` - Optional compression algorithm (zstd, lz4, snappy, etc.)
+/// * `batch_size` - Optional batch size for processing
+/// * `buffer_size` - Optional buffer size for reading
+/// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller file).
+///   If false (default), each segment is a separate row.
 pub fn ssim_to_parquets(
     file_path: &str,
     output_path: Option<&str>,
     compression: Option<&str>,
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
+    condense_segments: Option<bool>,
 ) -> PolarsResult<()> {
     let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
         .map_err(|e| PolarsError::IO {
@@ -721,6 +754,7 @@ pub fn ssim_to_parquets(
     let mut processor = ParquetWriterProcessor::new(
         output_path.unwrap_or("."),
         compression,
+        condense_segments.unwrap_or(false),
     )?;
     reader.process(&mut processor)
 }

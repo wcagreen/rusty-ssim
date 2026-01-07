@@ -2,10 +2,28 @@
 
 A command-line interface for parsing SSIM (Standard Schedules Information Manual) files into CSV and Parquet formats with high performance and memory efficiency.
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [Build from Source (Current)](#build-from-source-current)
+  - [Prerequisites](#prerequisites)
+  - [Future Installation Options](#future-installation-options)
+- [Quick Start](#quick-start)
+- [Commands Overview](#commands-overview)
+- [Command Reference](#command-reference)
+  - [ssim csv - Convert to CSV](#ssim-csv---convert-to-csv)
+  - [ssim parquet - Convert to Parquet](#ssim-parquet---convert-to-parquet)
+- [Performance Guide](#performance-guide)
+  - [Batch Size Optimization](#batch-size-optimization)
+  - [Buffer Size Optimization](#buffer-size-optimization)
+  - [Format Selection Guide](#format-selection-guide)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Getting Help](#getting-help)
+
 ## Installation
 
 ### Build from Source (Current)
-
 ```bash
 git clone https://github.com/wcagreen/rusty-ssim.git
 cd rusty-ssim
@@ -13,7 +31,6 @@ cargo build -p cli-rusty-ssim --release
 ```
 
 The binary will be located at `target/release/cli-rusty-ssim`. Add it to your PATH for global access:
-
 ```bash
 # On Linux/macOS
 export PATH="$PATH:/path/to/rusty-ssim/target/release"
@@ -30,10 +47,7 @@ export PATH="$PATH:/path/to/rusty-ssim/target/release"
 - `pip install rustyssim` - PyPI package  
 - `docker run rustyssim` - Docker container
 
-
-
 ## Quick Start
-
 ```bash
 # Parse SSIM to CSV (simplest usage)
 ssim csv -s schedule.ssim -o schedule.csv
@@ -72,6 +86,10 @@ ssim csv [OPTIONS]
 - **`--batch-size`** `<NUMBER>`: Records to process per batch (default: 10,000)
 - **`--buffer-size`** `<NUMBER>`: I/O buffer size in bytes (default: 8,192)
 - **`--help, -h`**: Show help for this command
+- **`--condense-segments`**: Groups segment records (type 4) into a `segment_data` 
+    column nested under their parent record (type 3). Produces flight-level rows 
+    with nested segment details—resulting in smaller files and faster processing. 
+    (default: disabled)
 
 #### Examples
 ```bash
@@ -86,6 +104,9 @@ ssim csv -s ./data/large_schedule.ssim -o ./output/large.csv --batch-size 50000 
 
 # Using full argument names
 ssim csv --ssim-path ./data/schedule.ssim --output-path ./output/schedule.csv --batch-size 25000
+
+# Condense segments into a single `segment_data` column (JSON in CSV)
+ssim csv -s ./data/schedule.ssim -o ./output/parsed_schedule.csv --condense-segments
 ```
 
 ---
@@ -107,6 +128,10 @@ ssim parquet [OPTIONS]
 - **`--compression, -c`** `<TYPE>`: Compression algorithm (default: "uncompressed")
 - **`--batch-size`** `<NUMBER>`: Records to process per batch (default: 10,000)
 - **`--buffer-size`** `<NUMBER>`: I/O buffer size in bytes (default: 8,192)
+- **`--condense-segments`**: Groups segment records (type 4) into a `segment_data` 
+    column nested under their parent record (type 3). Produces flight-level rows 
+    with nested segment details—resulting in smaller files and faster processing. 
+    (default: disabled)
 - **`--help, -h`**: Show help for this command
 
 #### Compression Options
@@ -136,6 +161,9 @@ ssim parquet -s ./data/huge_schedule.ssim -o ./output -c lz4 --batch-size 100000
 
 # Maximum compression for archival
 ssim parquet -s ./data/schedule.ssim -o ./archive -c brotli --batch-size 25000
+
+# Condense segments into a nested `segment_data` column per record type 3
+ssim parquet -s ./data/schedule.ssim -o ./output --condense-segments
 ```
 
 #### Output Format
@@ -151,7 +179,6 @@ Creates separate `.parquet` files in the output directory:
 ### Batch Size Optimization
 
 Choose batch size based on your file size and available memory:
-
 ```bash
 # Small files (< 100MB)
 ssim csv -s small.ssim -o output.csv --batch-size 10000
@@ -169,7 +196,6 @@ ssim csv -s any_size.ssim -o output.csv --batch-size 5000
 ### Buffer Size Optimization
 
 Tune I/O buffer size for better throughput on large files:
-
 ```bash
 # Default (8KB) - Good for most files
 ssim csv -s schedule.ssim -o output.csv
@@ -197,6 +223,7 @@ ssim parquet -s huge.ssim -o ./output -c lz4 --batch-size 100000 --buffer-size 1
 - Need to query specific airlines efficiently
 - Storage space is a concern
 - Building data pipelines
+- Want each carrier in it's own parquet.
 
 ---
 
@@ -242,7 +269,6 @@ ssim parquet -s file.ssim -o ./output -c lz4
 ```
 
 ### Getting Help
-
 ```bash
 # General help
 ssim --help

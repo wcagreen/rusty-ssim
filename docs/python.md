@@ -2,6 +2,21 @@
 
 A fast Rust-based Python module for parsing SSIM (Standard Schedules Information Manual) files into various formats including Polars DataFrames, CSV, and Parquet files.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [API Reference](#api-reference)
+  - [parse_ssim_to_dataframe()](#parse_ssim_to_dataframe)
+  - [split_ssim_to_dataframes()](#split_ssim_to_dataframes)
+  - [parse_ssim_to_csv()](#parse_ssim_to_csv)
+  - [parse_ssim_to_parquets()](#parse_ssim_to_parquets)
+- [Example Workflows](#example-workflows)
+  - [Complete Analysis Pipeline](#complete-analysis-pipeline)
+  - [Large File Processing](#large-file-processing)
+  - [Condense Segments](#condense-segments)
+
+
 ## Installation
 
 ```bash
@@ -30,7 +45,8 @@ Parse an SSIM file into a single Polars DataFrame containing all record types (c
 def parse_ssim_to_dataframe(
     file_path: str,
     batch_size: int = 10000,
-    buffer_size: int = 8192
+    buffer_size: int = 8192,
+    condense_segments: bool = False
 ) -> pl.DataFrame
 ```
 
@@ -38,6 +54,7 @@ def parse_ssim_to_dataframe(
 - **file_path** (str): Path to the SSIM file to parse
 - **batch_size** (int, optional): Number of records to process in each batch for memory efficiency. Defaults to 10,000
 - **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
+- **condense_segments** (bool, optional): Consolidates all segment records (type 4) into a single `segment_data` column under their parent record (type 3). Produces flight-level rows with nested segment details—resulting in smaller files and faster processing. Defaults to False
 
 **Returns:**
 - **polars.DataFrame**: Combined DataFrame containing all flight schedule data with the following key columns:
@@ -130,7 +147,8 @@ def parse_ssim_to_csv(
     file_path: str,
     output_path: str,
     batch_size: int = 10000,
-    buffer_size: int = 8192
+    buffer_size: int = 8192,
+    condense_segments: bool = False
 ) -> None
 ```
 
@@ -139,6 +157,7 @@ def parse_ssim_to_csv(
 - **output_path** (str): Path where the output CSV file will be created
 - **batch_size** (int, optional): Batch size for streaming processing. Defaults to 10,000
 - **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
+- **condense_segments** (bool, optional): Consolidates all segment records (type 4) into a single `segment_data` column under their parent record (type 3). Produces flight-level rows with nested segment details—resulting in smaller files and faster processing. Defaults to False
 
 **Returns:**
 - **None**: Function writes directly to file
@@ -178,7 +197,8 @@ def parse_ssim_to_parquets(
     output_path: str = ".",
     compression: str = "uncompressed",
     batch_size: int = 10000,
-    buffer_size: int = 8192
+    buffer_size: int = 8192,
+    condense_segments: bool = False
 ) -> None
 ```
 
@@ -189,6 +209,7 @@ def parse_ssim_to_parquets(
   - **Available options**: `snappy`, `gzip`, `lz4`, `zstd`, `uncompressed`, `brotli`, `lzo`
 - **batch_size** (int, optional): Batch size for streaming processing. Defaults to 10,000
 - **buffer_size** (int, optional): Size of the read buffer in bytes for I/O operations. Larger values improve throughput for large files. Defaults to 8,192
+- **condense_segments** (bool, optional): Consolidates all segment records (type 4) into a single `segment_data` column under their parent record (type 3). Produces flight-level rows with nested segment details—resulting in smaller files and faster processing. Defaults to False
 
 **Returns:**
 - **None**: Function creates separate `.parquet` files for each airline
@@ -269,9 +290,81 @@ rs.parse_ssim_to_parquets(
     buffer_size=131072  # 128KB buffer for maximum throughput
 )
 
-print("Processing complete. Files created:")
-for file in os.listdir(output_dir):
-    if file.endswith('.parquet'):
-        size_mb = os.path.getsize(os.path.join(output_dir, file)) / 1024 / 1024
-        print(f"  {file}: {size_mb:.1f} MB")
 ```
+
+## Condense segments
+
+When `condense_segments=True` is passed to the parsing functions, all record
+type 4 (segment) records are grouped under their parent record type 3 and
+returned as a single column named `segment_data`. Each value in
+`segment_data` is a list of dictionary-like structs (one per segment)
+containing the parsed fields from the type 4 records. This keeps flight-level
+rows flat while preserving associated segment details.
+
+Behavior by output type:
+- DataFrame: `segment_data` is a list column where each element is a list of
+    struct/dict-like items. Use `explode` + `unnest` to expand segments into rows.
+- CSV: `segment_data` is JSON-encoded; each row contains a JSON list of
+    dictionaries in the `segment_data` column.
+- Parquet: `segment_data` is a nested list/struct column, suitable for
+    hierarchical processing in downstream tools.
+
+Examples:
+
+```python
+import rustyssim as rs
+import polars as pl
+
+# Parse to a DataFrame with condensed segments
+df = rs.parse_ssim_to_dataframe(
+    "./data/schedule.ssim",
+    batch_size=50_000,
+    buffer_size=65536,
+    condense_segments=True,
+)
+
+
+# Segment Struct
+schema = pl.List(
+    pl.Struct(
+        {
+            "board_point_indicator": pl.Utf8,
+            "off_point_indicator": pl.Utf8,
+            "board_point": pl.Utf8,
+            "off_point": pl.Utf8,
+            "data_element_identifier": pl.Utf8,
+            "data": pl.Utf8,
+        }
+    )
+)
+
+# Expand segments into a flat segments DataFrame
+df_exploded = (
+    df.with_columns(
+        pl.col("segment_data").str.json_decode(schema).alias("segment_data")
+    )
+    .explode("segment_data")  # one row per segment
+    .unnest("segment_data")  # convert struct to columns
+)
+
+print(df_exploded.head())
+
+# # If using CSV output, enable condense on write
+rs.parse_ssim_to_csv(
+    "./data/schedule.ssim",
+    "./output/schedule.csv",
+    batch_size=50_000,
+    buffer_size=65536,
+    condense_segments=True,
+)
+
+# For Parquet outputs the nested column is preserved for analytics
+rs.parse_ssim_to_parquets(
+    "./data/schedule.ssim",
+    output_path="./out",
+    batch_size=50_000,
+    buffer_size=65536,
+    condense_segments=True,
+)
+```
+

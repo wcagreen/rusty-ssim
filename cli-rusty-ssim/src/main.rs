@@ -38,6 +38,10 @@ struct SsimParquetOptions {
     /// Buffer size for streaming.
     #[arg(long, default_value = "8192")]
     buffer_size: usize,
+
+    /// Condense segments into a single JSON column per flight (reduces file size)
+    #[arg(long, default_value = "false")]
+    condense_segments: bool,
 }
 
 #[derive(Args)]
@@ -57,6 +61,10 @@ struct SsimCsvOptions {
     /// Buffer size for streaming.
     #[arg(long, default_value = "8192")]
     buffer_size: usize,
+
+    /// Condense segments into a single JSON column per flight (reduces file size)
+    #[arg(long, default_value = "false")]
+    condense_segments: bool,
 }
 
 fn main() {
@@ -70,6 +78,7 @@ fn main() {
                 Some(options.compression.as_str()),
                 Some(options.batch_size),
                 Some(options.buffer_size),
+                Some(options.condense_segments),
             )
             .expect("Failed to parse SSIM File to Parquet's.");
         }
@@ -80,6 +89,7 @@ fn main() {
                 &options.output_path,
                 Some(options.batch_size),
                 Some(options.buffer_size),
+                Some(options.condense_segments),
             )
             .expect("Failed to parse SSIM File to CSV.");
         }

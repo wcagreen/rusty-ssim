@@ -3,7 +3,7 @@ members = [ "rusty-ssim-core", "cli-rusty-ssim", "py-rusty-ssim" ]
 resolver = "3"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 authors = ["William Green"]
 edition = "2024"
 license = "MIT"
@@ -11,6 +11,6 @@ repository = "https://github.com/wcagreen/rusty-ssim"
 
 
 [workspace.dependencies]
-polars = { version = "0.50.0", features = ["lazy", "parquet", "dtype-struct", "ipc", "performant"] }
+polars = { version = "0.50.0", features = ["lazy", "parquet", "dtype-struct", "ipc", "performant", "json"] }
 serde = "1.0.218"
-rusty-ssim-core = { version = "0.4.0", path="./rusty-ssim-core"}
+rusty-ssim-core = { version = "0.5.0", path="./rusty-ssim-core"}
