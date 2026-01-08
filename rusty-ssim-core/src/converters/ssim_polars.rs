@@ -1,5 +1,7 @@
 use polars::error::PolarsResult;
-use polars::prelude::{DataFrame, IntoLazy, JoinArgs, JoinType, IntoColumn, NamedFrom, Series, col, cols};
+use polars::prelude::{
+    DataFrame, IntoColumn, IntoLazy, JoinArgs, JoinType, NamedFrom, Series, col, cols,
+};
 use std::fmt::Write;
 
 /// Condenses segments DataFrame by grouping and serializing to JSON strings.
@@ -8,7 +10,11 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     // Group segments by flight keys using Polars
     let grouped = segments
         .lazy()
-        .group_by([col("flight_designator"), col("control_duplicate_indicator")])
+        .group_by([
+            col("flight_designator"),
+            col("control_duplicate_indicator"),
+            col("leg_sequence_number"),
+        ])
         .agg([
             col("board_point_indicator"),
             col("off_point_indicator"),
@@ -18,11 +24,12 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
             col("data"),
         ])
         .collect()?;
-    
+
     let height = grouped.height();
     let flight_designators = grouped.column("flight_designator")?.clone();
     let control_dups = grouped.column("control_duplicate_indicator")?.clone();
-    
+    let leg_sequence_numbers = grouped.column("leg_sequence_number")?.clone();
+
     // Get list columns - extract the ChunkedArrays directly for faster access
     let board_point_ind = grouped.column("board_point_indicator")?.list()?;
     let off_point_ind = grouped.column("off_point_indicator")?.list()?;
@@ -30,15 +37,15 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     let off_point = grouped.column("off_point")?.list()?;
     let dei = grouped.column("data_element_identifier")?.list()?;
     let data_col = grouped.column("data")?.list()?;
-    
+
     // Pre-allocate with estimated capacity
     let mut json_strings: Vec<String> = Vec::with_capacity(height);
-    
+
     for i in 0..height {
         // Allocate per-row buffer (reusing would require clearing)
         let mut json_buffer = String::with_capacity(1024);
         json_buffer.push('[');
-        
+
         // Get the Series for each list column at row i
         if let (Some(bpi), Some(opi), Some(bp), Some(bo), Some(d), Some(da)) = (
             board_point_ind.get_as_series(i),
@@ -49,7 +56,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
             data_col.get_as_series(i),
         ) {
             let len = bpi.len();
-            
+
             // Get string chunked arrays for direct access
             let bpi_ca = bpi.str().ok();
             let opi_ca = opi.str().ok();
@@ -57,26 +64,27 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
             let bo_ca = bo.str().ok();
             let d_ca = d.str().ok();
             let da_ca = da.str().ok();
-            
+
             for j in 0..len {
                 if j > 0 {
                     json_buffer.push(',');
                 }
                 json_buffer.push('{');
-                
+
                 let mut first = true;
-                
+
                 // Optimized field writing with minimal allocations
                 macro_rules! write_field {
                     ($ca:expr, $name:literal) => {
                         if let Some(ca) = &$ca {
                             if let Some(s) = ca.get(j) {
-
-                                if !first { 
-                                    json_buffer.push(','); 
+                                if !first {
+                                    json_buffer.push(',');
                                 }
                                 #[allow(unused_assignments)]
-                                { first = false; }
+                                {
+                                    first = false;
+                                }
                                 json_buffer.push('"');
                                 json_buffer.push_str($name);
                                 json_buffer.push_str("\":\"");
@@ -86,29 +94,30 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
                         }
                     };
                 }
-                
+
                 write_field!(bpi_ca, "board_point_indicator");
                 write_field!(opi_ca, "off_point_indicator");
                 write_field!(bp_ca, "board_point");
                 write_field!(bo_ca, "off_point");
                 write_field!(d_ca, "data_element_identifier");
                 write_field!(da_ca, "data");
-                
+
                 json_buffer.push('}');
             }
         }
-        
+
         json_buffer.push(']');
-        
+
         // Escape the entire JSON string to make it CSV-safe
         let escaped_json = escape_for_csv(&json_buffer);
         json_strings.push(escaped_json);
     }
-    
+
     // Build the condensed DataFrame with just 3 columns
     DataFrame::new(vec![
         flight_designators,
         control_dups,
+        leg_sequence_numbers,
         Series::new("segment_data".into(), json_strings).into_column(),
     ])
 }
@@ -139,11 +148,14 @@ fn escape_for_csv(s: &str) -> String {
 #[inline]
 fn escape_json_into(buffer: &mut String, s: &str) {
     // Fast path: check if any escaping is needed
-    if !s.bytes().any(|b| matches!(b, b'"' | b'\\' | b'\n' | b'\r' | b'\t' | b'\x00'..=b'\x1F')) {
+    if !s
+        .bytes()
+        .any(|b| matches!(b, b'"' | b'\\' | b'\n' | b'\r' | b'\t' | b'\x00'..=b'\x1F'))
+    {
         buffer.push_str(s);
         return;
     }
-    
+
     // Slow path: escape characters
     for c in s.chars() {
         match c {
@@ -164,26 +176,26 @@ fn escape_json_into(buffer: &mut String, s: &str) {
 }
 
 /// Combines Carrier, Flight, and Segment DataFrames into a single DataFrame.
-/// 
+///
 /// # Arguments
 /// * `carrier` - DataFrame containing Carrier records.
 /// * `flights` - DataFrame containing Flight Leg records.
 /// * `segments` - DataFrame containing Segment records.
-/// * `condense_segments` - If true, aggregates all segments per flight into a single JSON string 
+/// * `condense_segments` - If true, aggregates all segments per flight into a single JSON string
 ///   column called `segment_data`. This reduces file size and memory but changes the output format.
 ///   If false (default), each segment remains as a separate row with individual columns.
-/// 
+///
 /// # Returns
 /// * `PolarsResult<DataFrame>` - A combined DataFrame with all records joined.
-/// 
+///
 /// # Errors
 /// Returns an error if the join operations fail.
-/// 
+///
 /// # Example
-/// ```ignore 
+/// ```ignore
 /// // Default behavior - flat format (each segment is a row)
 /// let combined_df = combine_all_dataframes(carrier_df, flights_df, segments_df, false)?;
-/// 
+///
 /// // Condensed format - segments as JSON string (smaller file size)
 /// let combined_df = combine_all_dataframes(carrier_df, flights_df, segments_df, true)?;
 /// ```
@@ -197,21 +209,37 @@ pub(crate) fn combine_all_dataframes(
         .lazy()
         .drop(cols(["record_type", "record_serial_number"]))
         .join(
-            carrier.lazy().drop(cols(["record_type", "record_serial_number"])),
-            [col("airline_designator"), col("control_duplicate_indicator")],
-            [col("airline_designator"), col("control_duplicate_indicator")],
+            carrier
+                .lazy()
+                .drop(cols(["record_type", "record_serial_number"])),
+            [
+                col("airline_designator"),
+                col("control_duplicate_indicator"),
+            ],
+            [
+                col("airline_designator"),
+                col("control_duplicate_indicator"),
+            ],
             JoinArgs::new(JoinType::Left),
         );
 
     if condense_segments {
         // Condense segments to JSON strings - reduces file size and memory
         let condensed_segments = condense_segments_to_json(segments)?;
-        
+
         flights_with_carrier
             .join(
                 condensed_segments.lazy(),
-                [col("flight_designator"), col("control_duplicate_indicator")],
-                [col("flight_designator"), col("control_duplicate_indicator")],
+                [
+                    col("flight_designator"),
+                    col("control_duplicate_indicator"),
+                    col("leg_sequence_number"),
+                ],
+                [
+                    col("flight_designator"),
+                    col("control_duplicate_indicator"),
+                    col("leg_sequence_number"),
+                ],
                 JoinArgs::new(JoinType::Left),
             )
             .with_new_streaming(true)
@@ -222,6 +250,7 @@ pub(crate) fn combine_all_dataframes(
             .join(
                 segments.lazy().select([
                     col("flight_designator"),
+                    col("leg_sequence_number"),
                     col("control_duplicate_indicator"),
                     col("board_point_indicator"),
                     col("off_point_indicator"),
@@ -230,8 +259,16 @@ pub(crate) fn combine_all_dataframes(
                     col("data_element_identifier"),
                     col("data"),
                 ]),
-                [col("flight_designator"), col("control_duplicate_indicator")],
-                [col("flight_designator"), col("control_duplicate_indicator")],
+                [
+                    col("flight_designator"),
+                    col("control_duplicate_indicator"),
+                    col("leg_sequence_number"),
+                ],
+                [
+                    col("flight_designator"),
+                    col("control_duplicate_indicator"),
+                    col("leg_sequence_number"),
+                ],
                 JoinArgs::new(JoinType::Left),
             )
             .with_new_streaming(true)

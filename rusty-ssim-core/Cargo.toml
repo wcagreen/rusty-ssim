@@ -11,6 +11,7 @@ description = "Core Library that serves as the backbone for SSIM parser."
 polars.workspace = true
 serde.workspace = true
 rayon = "1.11.0"
+rand = "0.9.2"
 
 
 [lib]

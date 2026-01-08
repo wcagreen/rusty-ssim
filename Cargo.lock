@@ -455,7 +455,7 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
 name = "cli-rusty-ssim"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "clap",
  "rusty-ssim-core",
@@ -2201,7 +2201,7 @@ dependencies = [
 
 [[package]]
 name = "py-rusty-ssim"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "pyo3",
  "pyo3-polars",
@@ -2684,10 +2684,11 @@ checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "rusty-ssim-core"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "polars",
  "polars-testing",
+ "rand",
  "rayon",
  "serde",
  "tempfile",

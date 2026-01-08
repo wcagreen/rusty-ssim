@@ -17,9 +17,8 @@ pub fn parse_flight_record_legs<'a>(
         &line[9..11],
         &line[127..128]
     ));
-    let control_duplicate_indicator = Cow::Owned(
-        persistent_carriers.control_duplicate_indicator.clone()
-    );
+    let control_duplicate_indicator =
+        Cow::Owned(persistent_carriers.control_duplicate_indicator.clone());
 
     Some(FlightLegRecord {
         flight_designator,
@@ -88,9 +87,8 @@ pub fn parse_segment_record<'a>(
         &line[9..11],
         &line[127..128]
     ));
-    let control_duplicate_indicator = Cow::Owned(
-        persistent_carriers.control_duplicate_indicator.clone()
-    );
+    let control_duplicate_indicator =
+        Cow::Owned(persistent_carriers.control_duplicate_indicator.clone());
 
     Some(SegmentRecords {
         flight_designator,
@@ -134,5 +132,3 @@ pub fn parse_carrier_record(line: &str) -> Option<CarrierRecord> {
         record_serial_number: line[194..200].to_string(),
     })
 }
-
-

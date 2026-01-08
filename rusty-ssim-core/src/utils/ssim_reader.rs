@@ -13,7 +13,9 @@ use crate::records::carrier_record::CarrierRecord;
 use crate::records::flight_leg_records::FlightLegRecord;
 use crate::records::segment_records::SegmentRecords;
 use crate::utils::ssim_exporters::to_parquet;
-use crate::utils::ssim_parser::{parse_carrier_record, parse_flight_record_legs, parse_segment_record};
+use crate::utils::ssim_parser::{
+    parse_carrier_record, parse_flight_record_legs, parse_segment_record,
+};
 use polars::prelude::*;
 use rayon::prelude::*;
 use std::fs::{File, OpenOptions, create_dir_all};
@@ -70,7 +72,11 @@ pub struct SsimReader {
 }
 
 impl SsimReader {
-    pub fn new(file_path: &str, batch_size: Option<usize>, buffer_size: Option<usize>) -> std::io::Result<Self> {
+    pub fn new(
+        file_path: &str,
+        batch_size: Option<usize>,
+        buffer_size: Option<usize>,
+    ) -> std::io::Result<Self> {
         let file = File::open(file_path)?;
         let reader = BufReader::with_capacity(buffer_size.unwrap_or(DEFAULT_BUFFER_SIZE), file);
 
@@ -129,7 +135,11 @@ impl SsimReader {
         }
     }
 
-    fn should_continue_batch(&mut self, current_batch_size: usize, last_record_type: Option<char>) -> std::io::Result<bool> {
+    fn should_continue_batch(
+        &mut self,
+        current_batch_size: usize,
+        last_record_type: Option<char>,
+    ) -> std::io::Result<bool> {
         if current_batch_size < self.batch_size {
             return Ok(true);
         }
@@ -155,7 +165,7 @@ impl SsimReader {
     }
 
     /// Main processing loop - works with any BatchProcessor
-    /// 
+    ///
     /// Uses parallel parsing with rayon for flight and segment records
     /// while maintaining sequential carrier context handling.
     pub fn process<P: BatchProcessor>(&mut self, processor: &mut P) -> PolarsResult<()> {
@@ -191,10 +201,8 @@ impl SsimReader {
                         }
                         Some('5') => {
                             if !flight_lines.is_empty() || !segment_lines.is_empty() {
-                                let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                                    &flight_lines,
-                                    &segment_lines,
-                                );
+                                let (flight_batch, segment_batch) =
+                                    self.parse_lines_parallel(&flight_lines, &segment_lines);
                                 processor.process_batch(
                                     flight_batch,
                                     segment_batch,
@@ -216,10 +224,8 @@ impl SsimReader {
                     match self.should_continue_batch(current_batch_size, last_record_type) {
                         Ok(should_continue) => {
                             if !should_continue {
-                                let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                                    &flight_lines,
-                                    &segment_lines,
-                                );
+                                let (flight_batch, segment_batch) =
+                                    self.parse_lines_parallel(&flight_lines, &segment_lines);
                                 processor.process_batch(
                                     flight_batch,
                                     segment_batch,
@@ -248,10 +254,8 @@ impl SsimReader {
         }
 
         if !flight_lines.is_empty() || !segment_lines.is_empty() {
-            let (flight_batch, segment_batch) = self.parse_lines_parallel(
-                &flight_lines,
-                &segment_lines,
-            );
+            let (flight_batch, segment_batch) =
+                self.parse_lines_parallel(&flight_lines, &segment_lines);
             processor.process_batch(
                 flight_batch,
                 segment_batch,
@@ -264,7 +268,7 @@ impl SsimReader {
     }
 
     /// Parse flight and segment lines in parallel using rayon.
-    /// 
+    ///
     /// This is the hot path - parsing string slices into records is CPU-bound
     /// and benefits significantly from parallelization.
     fn parse_lines_parallel<'a>(
@@ -273,7 +277,7 @@ impl SsimReader {
         segment_lines: &'a [String],
     ) -> (Vec<FlightLegRecord<'a>>, Vec<SegmentRecords<'a>>) {
         let carrier = self.persistent_carriers.as_ref();
-        
+
         // Parse flights and segments in parallel
         let (flights, segments) = rayon::join(
             || {
@@ -313,9 +317,9 @@ fn concat_dataframes(dfs: Vec<DataFrame>) -> PolarsResult<DataFrame> {
         return Ok(DataFrame::empty());
     }
     if dfs.len() == 1 {
-        return dfs.into_iter().next().ok_or_else(|| 
+        return dfs.into_iter().next().ok_or_else(|| {
             PolarsError::ComputeError("Expected single DataFrame but found none".into())
-        );
+        });
     }
     // Convert to lazy, concat, then collect - more memory efficient
     let lazy_frames: Vec<LazyFrame> = dfs.into_iter().map(|df| df.lazy()).collect();
@@ -360,13 +364,11 @@ impl BatchProcessor for CombinedDataFrameProcessor {
         segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
-        let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier,
-            flight_batch,
-            segment_batch,
-        )?;
+        let (carrier_df, flight_df, segment_df) =
+            convert_to_dataframes(carrier, flight_batch, segment_batch)?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
+        let batch_df =
+            combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if !batch_df.is_empty() {
             self.batches.push(batch_df);
         }
@@ -403,7 +405,8 @@ impl SplitDataFrameProcessor {
     }
 
     pub fn into_result(self) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-        self.result.ok_or_else(|| PolarsError::ComputeError("Processor not finalized".into()))
+        self.result
+            .ok_or_else(|| PolarsError::ComputeError("Processor not finalized".into()))
     }
 }
 
@@ -420,11 +423,8 @@ impl BatchProcessor for SplitDataFrameProcessor {
         segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
-        let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier,
-            flight_batch,
-            segment_batch,
-        )?;
+        let (carrier_df, flight_df, segment_df) =
+            convert_to_dataframes(carrier, flight_batch, segment_batch)?;
 
         if !carrier_df.is_empty() {
             self.carrier_batches.push(carrier_df);
@@ -442,10 +442,10 @@ impl BatchProcessor for SplitDataFrameProcessor {
         let carriers = concat_dataframes(std::mem::take(&mut self.carrier_batches))?;
         let flights = concat_dataframes(std::mem::take(&mut self.flight_batches))?;
         let segments = concat_dataframes(std::mem::take(&mut self.segment_batches))?;
-        
+
         // Deduplicate carriers
         let carriers = carriers.unique_stable(None, UniqueKeepStrategy::First, None)?;
-        
+
         self.result = Some((carriers, flights, segments));
         Ok(())
     }
@@ -486,7 +486,9 @@ impl CsvWriterProcessor {
 
     fn ensure_directory_exists(file_path: &str) -> PolarsResult<()> {
         let path = Path::new(file_path);
-        if let Some(parent) = path.parent() && !parent.exists() {
+        if let Some(parent) = path.parent()
+            && !parent.exists()
+        {
             create_dir_all(parent).map_err(|e| PolarsError::IO {
                 error: Arc::from(e),
                 msg: Some("Failed to create directory".into()),
@@ -513,13 +515,11 @@ impl BatchProcessor for CsvWriterProcessor {
         segment_batch: Vec<SegmentRecords<'_>>,
         carrier: Option<&CarrierRecord>,
     ) -> PolarsResult<()> {
-        let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier,
-            flight_batch,
-            segment_batch,
-        )?;
+        let (carrier_df, flight_df, segment_df) =
+            convert_to_dataframes(carrier, flight_batch, segment_batch)?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
+        let batch_df =
+            combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         self.write_dataframe(batch_df)
     }
 
@@ -543,7 +543,11 @@ pub struct ParquetWriterProcessor {
 }
 
 impl ParquetWriterProcessor {
-    pub fn new(output_path: &str, compression: Option<&str>, condense_segments: bool) -> PolarsResult<Self> {
+    pub fn new(
+        output_path: &str,
+        compression: Option<&str>,
+        condense_segments: bool,
+    ) -> PolarsResult<Self> {
         let path = Path::new(output_path);
 
         if path.extension().is_some() {
@@ -597,7 +601,9 @@ impl ParquetWriterProcessor {
             return Ok(());
         }
 
-        let (airline, control) = self.current_carrier_info.as_ref()
+        let (airline, control) = self
+            .current_carrier_info
+            .as_ref()
             .ok_or_else(|| PolarsError::ComputeError("No carrier info for parquet file".into()))?;
 
         let filename = self.build_filename(airline, control);
@@ -631,13 +637,11 @@ impl BatchProcessor for ParquetWriterProcessor {
             ));
         }
 
-        let (carrier_df, flight_df, segment_df) = convert_to_dataframes(
-            carrier,
-            flight_batch,
-            segment_batch,
-        )?;
+        let (carrier_df, flight_df, segment_df) =
+            convert_to_dataframes(carrier, flight_batch, segment_batch)?;
 
-        let batch_df = combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
+        let batch_df =
+            combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if !batch_df.is_empty() {
             self.accumulated_batches.push(batch_df);
         }
@@ -660,7 +664,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 // ============================================================================
 
 /// Parse SSIM file into a single combined DataFrame.
-/// 
+///
 /// # Arguments
 /// * `file_path` - Path to the SSIM file
 /// * `batch_size` - Optional batch size for processing
@@ -673,8 +677,8 @@ pub fn ssim_to_dataframe(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PolarsResult<DataFrame> {
-    let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
-        .map_err(|e| PolarsError::IO {
+    let mut reader =
+        SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
@@ -690,8 +694,8 @@ pub fn ssim_to_dataframes(
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
 ) -> PolarsResult<(DataFrame, DataFrame, DataFrame)> {
-    let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
-        .map_err(|e| PolarsError::IO {
+    let mut reader =
+        SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
@@ -702,7 +706,7 @@ pub fn ssim_to_dataframes(
 }
 
 /// Parse SSIM file and write to CSV (streaming).
-/// 
+///
 /// # Arguments
 /// * `file_path` - Path to the SSIM file
 /// * `output_path` - Path for the output CSV file
@@ -717,8 +721,8 @@ pub fn ssim_to_csv(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PolarsResult<()> {
-    let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
-        .map_err(|e| PolarsError::IO {
+    let mut reader =
+        SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
@@ -728,7 +732,7 @@ pub fn ssim_to_csv(
 }
 
 /// Parse SSIM file and write to Parquet files (one per carrier).
-/// 
+///
 /// # Arguments
 /// * `file_path` - Path to the SSIM file
 /// * `output_path` - Optional output directory path
@@ -745,8 +749,8 @@ pub fn ssim_to_parquets(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PolarsResult<()> {
-    let mut reader = SsimReader::new(file_path, batch_size, buffer_size)
-        .map_err(|e| PolarsError::IO {
+    let mut reader =
+        SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
             error: Arc::from(e),
             msg: None,
         })?;
