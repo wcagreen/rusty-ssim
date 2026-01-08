@@ -1,9 +1,89 @@
 use polars::prelude::*;
 use polars_testing::assert_dataframe_equal;
 use polars_testing::asserts::DataFrameEqualOptions;
+use rand::Rng;
 use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
 use std::fs;
 use tempfile::TempDir;
+
+fn multi_legged_ssim_file_generator(flights_count: i16, ivi_count: i8) -> String {
+    let mut rng = rand::rng();
+    let mut lines = vec![
+        "1AIRLINE STANDARD SCHEDULE DATA SET                                                                                                                                                            001000001".to_string(),
+    ];
+    lines.push("2UXX  0008S18 25MAR1827OCT1813OCT17                                    P                                                                                                                      1301000002".to_string());
+
+    // Sample airport pairs for multi-leg flights
+    let leg_configs = [
+        // Single leg flights
+        vec![("KEF", "0510", "AMS", "0800")],
+        vec![("LHR", "0900", "JFK", "1200")],
+        vec![("CDG", "1400", "DXB", "2300")],
+        // Two leg flights
+        vec![
+            ("KEF", "0510", "AMS", "0800"),
+            ("AMS", "0930", "LHR", "1000"),
+        ],
+        vec![
+            ("JFK", "0800", "ORD", "1000"),
+            ("ORD", "1130", "LAX", "1400"),
+        ],
+        vec![
+            ("DXB", "0200", "BKK", "1100"),
+            ("BKK", "1230", "SIN", "1530"),
+        ],
+    ];
+
+    for flight_idx in 0..flights_count {
+        let flight_number = format!("{:04}", 1000 + flight_idx);
+
+        // Randomly select a leg configuration
+        let selected_config = &leg_configs[rng.random_range(0..leg_configs.len())];
+
+        for ivi in 1..ivi_count {
+            let padded_ivi = format!("{:02}", ivi);
+
+            // Generate each leg
+            for (leg_idx, leg_data) in selected_config.iter().enumerate() {
+                let leg_number = format!("{:02}", leg_idx + 1);
+                let (origin, dep_time, dest, arr_time) = leg_data;
+
+                lines.push(format!(
+                    "3 XX {flight}{ivi_info}{leg_info}J28MAR1803APR18 2      {origin}{dep}{dep}+0000  {dest}{arr}{arr}+0200  73HY                                                             XY   13                            Y189VV738H189         000003",
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg_number,
+                    origin = origin,
+                    dep = dep_time,
+                    dest = dest,
+                    arr = arr_time
+                ));
+
+                lines.push(format!(
+                    "4 XX {flight}{ivi_info}{leg_info}J              AB050{origin}{dest}KL 2562                                                                                                                                                    000006",
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg_number,
+                    dest = dest,
+                    origin = origin
+                ));
+
+                lines.push(format!(
+                    "4 XX {flight}{ivi_info}{leg_info}J              AB127{origin}{dest}KLM DBA FLYFREE                                                                                                                                            000006",
+                    flight = flight_number,
+                    ivi_info = padded_ivi,
+                    leg_info = leg_number,
+                    dest = dest,
+                    origin = origin
+                ));
+            }
+        }
+    }
+
+    lines.push(String::from("5 XX                                                                                                                                                                                       000011E000012"));
+
+    lines.join("\n")
+}
 
 fn ssim_file_generator(flights_count: i16, ivi_count: i8) -> String {
     let mut lines = vec![
@@ -52,7 +132,7 @@ fn multi_carrier_ssim_file_generator(flights_count: i16, ivi_count: i8) -> Strin
 
     for carrier in &carriers {
         let carrier_code = carrier[0];
-        let carrier_flag = carrier[1]; 
+        let carrier_flag = carrier[1];
 
         let prefix = format!(
             "2U{}  0008S18 25MAR1827OCT1813OCT17                                    P",
@@ -125,14 +205,23 @@ fn create_temp_multi_ssim_file(flights_count: i16, ivi_count: i8) -> (String, Te
     (file_path.to_string_lossy().to_string(), temp_dir)
 }
 
-fn create_temp_ssim_file(flights_count: i16, ivi_count: i8) -> (String, TempDir) {
-    let content = ssim_file_generator(flights_count, ivi_count);
-    let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let file_path = temp_dir.path().join("test.ssim");
+fn create_temp_ssim_file(flights_count: i16, ivi_count: i8, multi_leg: bool) -> (String, TempDir) {
+    if multi_leg {
+        let content = multi_legged_ssim_file_generator(flights_count, ivi_count);
 
-    fs::write(&file_path, content).expect("Failed to write SSIM file");
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let file_path = temp_dir.path().join("test.ssim");
+        fs::write(&file_path, content).expect("Failed to write SSIM file");
+        return (file_path.to_string_lossy().to_string(), temp_dir);
+    } else {
+        let content = ssim_file_generator(flights_count, ivi_count);
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let file_path = temp_dir.path().join("test.ssim");
 
-    (file_path.to_string_lossy().to_string(), temp_dir)
+        fs::write(&file_path, content).expect("Failed to write SSIM file");
+
+        return (file_path.to_string_lossy().to_string(), temp_dir);
+    }
 }
 
 #[cfg(test)]
@@ -141,7 +230,7 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_dataframe_success() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2);
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2, false);
 
         let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
         assert!(
@@ -163,7 +252,7 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_dataframes_success() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2);
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2, false);
 
         let result = ssim_to_dataframes(&file_path, Some(1000), Some(8192));
         assert!(
@@ -238,12 +327,18 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_csv_success() {
-        let (file_path, temp_dir) = create_temp_ssim_file(10, 2);
+        let (file_path, temp_dir) = create_temp_ssim_file(10, 2, false);
 
         let output_path = temp_dir.path().join("output.csv");
         let output_path_str = output_path.to_str().unwrap();
 
-        let result = ssim_to_csv(&file_path, output_path_str, Some(1000), Some(8192), Some(false));
+        let result = ssim_to_csv(
+            &file_path,
+            output_path_str,
+            Some(1000),
+            Some(8192),
+            Some(false),
+        );
         assert!(
             result.is_ok(),
             "Failed to write SSIM to CSV: {:?}",
@@ -263,11 +358,18 @@ mod integration_tests {
 
     #[test]
     fn test_ssim_to_parquets_success() {
-        let (file_path, temp_dir) = create_temp_ssim_file(10, 2);
+        let (file_path, temp_dir) = create_temp_ssim_file(10, 2, false);
 
         let output_path = temp_dir.path().to_str().unwrap();
 
-        let result = ssim_to_parquets(&file_path, Some(output_path), Some("snappy"), Some(1000), Some(8192), Some(false));
+        let result = ssim_to_parquets(
+            &file_path,
+            Some(output_path),
+            Some("snappy"),
+            Some(1000),
+            Some(8192),
+            Some(false),
+        );
         assert!(
             result.is_ok(),
             "Failed to write SSIM to Parquet: {:?}",
@@ -305,7 +407,7 @@ mod integration_tests {
 
     #[test]
     fn test_minimal_ssim_data() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(2, 1);
+        let (file_path, _temp_dir) = create_temp_ssim_file(2, 1, false);
 
         let result = ssim_to_dataframe(&file_path, Some(100), Some(8192), Some(false));
         assert!(
@@ -330,7 +432,7 @@ mod integration_tests {
 
     #[test]
     fn test_different_batch_sizes() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(1000, 10);
+        let (file_path, _temp_dir) = create_temp_ssim_file(1000, 10, false);
 
         // Test with different batch sizes
         for batch_size in [1000, 5000, 10000, 15000] {
@@ -353,15 +455,21 @@ mod integration_tests {
 
     #[test]
     fn test_different_compressions() {
-        let (file_path, temp_dir) = create_temp_ssim_file(100, 10);
+        let (file_path, temp_dir) = create_temp_ssim_file(100, 10, false);
 
         let compressions = ["snappy", "gzip", "lz4", "zstd", "uncompressed"];
 
         for compression in compressions {
             let output_path = temp_dir.path().to_str().unwrap();
 
-            let result =
-                ssim_to_parquets(&file_path, Some(output_path), Some(compression), Some(100), Some(8192), Some(false));
+            let result = ssim_to_parquets(
+                &file_path,
+                Some(output_path),
+                Some(compression),
+                Some(100),
+                Some(8192),
+                Some(false),
+            );
             assert!(
                 result.is_ok(),
                 "Failed with compression {}: {:?}",
@@ -401,7 +509,7 @@ mod integration_tests {
 
     #[test]
     fn test_condense_segments() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(10, 5);
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 5, false);
 
         let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(true));
         assert!(
@@ -411,13 +519,37 @@ mod integration_tests {
         );
 
         let df = result.unwrap();
-        println!(
-            "Condensed segments DataFrame shape: {:?}",
-            df.shape()
-        );
+        println!("Condensed segments DataFrame shape: {:?}", df.shape());
 
         // Check that the segment_data column exists
         assert_eq!(df.get_column_names().len(), 58);
+    }
+
+    #[test]
+    fn test_multi_leg_segments_join() {
+        let (file_path, _temp_dir) = create_temp_ssim_file(10, 2, true);
+
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
+        let df = result.unwrap();
+
+        let result_agg = df
+            .clone()
+            .lazy()
+            .group_by([
+                col("flight_designator"),
+                col("control_duplicate_indicator"),
+                col("leg_sequence_number"),
+            ])
+            .agg([col("leg_sequence_number").count().alias("leg_count")])
+            .filter(col("leg_count").gt(lit(2)))
+            .collect()
+            .unwrap();
+
+        assert_eq!(
+            result_agg.height(),
+            0,
+            "There should be no legs with more than 2 segments."
+        );
     }
 }
 
@@ -428,7 +560,7 @@ mod performance_tests {
 
     #[test]
     fn test_large_file_performance() {
-        let (file_path, _temp_dir) = create_temp_ssim_file(5000, 20);
+        let (file_path, _temp_dir) = create_temp_ssim_file(5000, 20, false);
 
         let start = Instant::now();
         let result = ssim_to_dataframe(&file_path, Some(100000), Some(8192), Some(false));
@@ -450,4 +582,3 @@ mod performance_tests {
         );
     }
 }
-

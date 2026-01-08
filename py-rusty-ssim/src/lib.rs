@@ -24,8 +24,16 @@ fn parse_ssim_to_csv(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PyResult<()> {
-    py.allow_threads(|| ssim_to_csv(file_path, output_path, batch_size, buffer_size, condense_segments))
-        .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
+    py.allow_threads(|| {
+        ssim_to_csv(
+            file_path,
+            output_path,
+            batch_size,
+            buffer_size,
+            condense_segments,
+        )
+    })
+    .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
 }
 
 #[pyfunction]
@@ -39,8 +47,17 @@ fn parse_ssim_to_parquets(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PyResult<()> {
-    py.allow_threads(|| ssim_to_parquets(file_path, output_path, compression, batch_size, buffer_size, condense_segments))
-        .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
+    py.allow_threads(|| {
+        ssim_to_parquets(
+            file_path,
+            output_path,
+            compression,
+            batch_size,
+            buffer_size,
+            condense_segments,
+        )
+    })
+    .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
 }
 
 #[pyfunction]

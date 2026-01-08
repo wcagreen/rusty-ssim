@@ -2688,6 +2688,7 @@ version = "0.5.0"
 dependencies = [
  "polars",
  "polars-testing",
+ "rand",
  "rayon",
  "serde",
  "tempfile",

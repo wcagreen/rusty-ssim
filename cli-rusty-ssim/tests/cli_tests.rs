@@ -138,12 +138,10 @@ fn create_temp_ssim_file(content: &str) -> NamedTempFile {
     temp_file
 }
 
-
 #[cfg(test)]
 mod cli_tests {
-    use std::fs;
     use super::*;
-
+    use std::fs;
 
     #[test]
     fn test_cli_csv_command() {
@@ -154,10 +152,14 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "csv",
-                "-s", temp_file.path().to_str().unwrap(),
-                "-o", output_path.to_str().unwrap(),
-                "--batch-size", "100",
-                "--buffer-size", "8192"
+                "-s",
+                temp_file.path().to_str().unwrap(),
+                "-o",
+                output_path.to_str().unwrap(),
+                "--batch-size",
+                "100",
+                "--buffer-size",
+                "8192",
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -165,7 +167,10 @@ mod cli_tests {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            panic!("CLI command failed:\nSTDOUT: {}\nSTDERR: {}", stdout, stderr);
+            panic!(
+                "CLI command failed:\nSTDOUT: {}\nSTDERR: {}",
+                stdout, stderr
+            );
         }
 
         // Check that the output file was created
@@ -174,12 +179,14 @@ mod cli_tests {
         let file_content = fs::read_to_string(&output_path).expect("Failed to read output file");
         assert!(!file_content.is_empty(), "CSV file should not be empty");
 
-        println!("CLI CSV test passed. Output file size: {} bytes", file_content.len());
-
+        println!(
+            "CLI CSV test passed. Output file size: {} bytes",
+            file_content.len()
+        );
     }
 
     #[test]
-    fn test_cli_small_ssim_csv_command(){
+    fn test_cli_small_ssim_csv_command() {
         let temp_file = create_temp_ssim_file(MINIMAL_SSIM_DATA);
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let output_path = temp_dir.path().join("output.csv");
@@ -187,10 +194,14 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "csv",
-                "-s", temp_file.path().to_str().unwrap(),
-                "-o", output_path.to_str().unwrap(),
-                "--batch-size", "100",
-                "--buffer-size", "8192"
+                "-s",
+                temp_file.path().to_str().unwrap(),
+                "-o",
+                output_path.to_str().unwrap(),
+                "--batch-size",
+                "100",
+                "--buffer-size",
+                "8192",
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -198,7 +209,10 @@ mod cli_tests {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            panic!("CLI command failed:\nSTDOUT: {}\nSTDERR: {}", stdout, stderr);
+            panic!(
+                "CLI command failed:\nSTDOUT: {}\nSTDERR: {}",
+                stdout, stderr
+            );
         }
 
         // Check that the output file was created
@@ -207,9 +221,11 @@ mod cli_tests {
         let file_content = fs::read_to_string(&output_path).expect("Failed to read output file");
         assert!(!file_content.is_empty(), "CSV file should not be empty");
 
-        println!("CLI CSV test passed. Output file size: {} bytes", file_content.len());
+        println!(
+            "CLI CSV test passed. Output file size: {} bytes",
+            file_content.len()
+        );
     }
-
 
     #[test]
     fn test_cli_single_carrier_parquet_command() {
@@ -220,11 +236,16 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "parquet",
-                "--ssim-path", temp_file.path().to_str().unwrap(),
-                "--output-path", output_path.to_str().unwrap(),
-                "--compression", "snappy",
-                "--batch-size", "100",
-                "--buffer-size", "8192"
+                "--ssim-path",
+                temp_file.path().to_str().unwrap(),
+                "--output-path",
+                output_path.to_str().unwrap(),
+                "--compression",
+                "snappy",
+                "--batch-size",
+                "100",
+                "--buffer-size",
+                "8192",
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -232,7 +253,10 @@ mod cli_tests {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            panic!("CLI command failed:\nSTDOUT: {}\nSTDERR: {}", stdout, stderr);
+            panic!(
+                "CLI command failed:\nSTDOUT: {}\nSTDERR: {}",
+                stdout, stderr
+            );
         }
 
         // Check that parquet files were created
@@ -240,21 +264,33 @@ mod cli_tests {
         let parquet_files: Vec<_> = entries
             .filter_map(|entry| entry.ok())
             .filter(|entry| {
-                entry.path().extension()
+                entry
+                    .path()
+                    .extension()
                     .and_then(|ext| ext.to_str())
                     .map_or(false, |ext| ext == "parquet")
             })
             .collect();
 
-        assert!(!parquet_files.is_empty(), "Should have created at least one parquet file");
+        assert!(
+            !parquet_files.is_empty(),
+            "Should have created at least one parquet file"
+        );
 
         for file in &parquet_files {
             let metadata = file.metadata().expect("Failed to get file metadata");
             assert!(metadata.len() > 0, "Parquet file should not be empty");
-            println!("Created parquet file: {:?} ({} bytes)", file.path(), metadata.len());
+            println!(
+                "Created parquet file: {:?} ({} bytes)",
+                file.path(),
+                metadata.len()
+            );
         }
 
-        println!("CLI Parquet test passed. Created {} files", parquet_files.len());
+        println!(
+            "CLI Parquet test passed. Created {} files",
+            parquet_files.len()
+        );
     }
 
     #[test]
@@ -266,11 +302,16 @@ mod cli_tests {
         let output = Command::new(CLI_APP)
             .args(&[
                 "parquet",
-                "--ssim-path", temp_file.path().to_str().unwrap(),
-                "--output-path", output_path.to_str().unwrap(),
-                "--compression", "snappy",
-                "--batch-size", "100",
-                "--buffer-size", "8192"
+                "--ssim-path",
+                temp_file.path().to_str().unwrap(),
+                "--output-path",
+                output_path.to_str().unwrap(),
+                "--compression",
+                "snappy",
+                "--batch-size",
+                "100",
+                "--buffer-size",
+                "8192",
             ])
             .output()
             .expect("Failed to execute CLI command");
@@ -278,7 +319,10 @@ mod cli_tests {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            panic!("CLI command failed:\nSTDOUT: {}\nSTDERR: {}", stdout, stderr);
+            panic!(
+                "CLI command failed:\nSTDOUT: {}\nSTDERR: {}",
+                stdout, stderr
+            );
         }
 
         // Check that parquet files were created
@@ -286,58 +330,77 @@ mod cli_tests {
         let parquet_files: Vec<_> = entries
             .filter_map(|entry| entry.ok())
             .filter(|entry| {
-                entry.path().extension()
+                entry
+                    .path()
+                    .extension()
                     .and_then(|ext| ext.to_str())
                     .map_or(false, |ext| ext == "parquet")
             })
             .collect();
 
-        assert!(!parquet_files.is_empty(), "Should have created at least one parquet file");
+        assert!(
+            !parquet_files.is_empty(),
+            "Should have created at least one parquet file"
+        );
 
         for file in &parquet_files {
             let metadata = file.metadata().expect("Failed to get file metadata");
             assert!(metadata.len() > 0, "Parquet file should not be empty");
-            println!("Created parquet file: {:?} ({} bytes)", file.path(), metadata.len());
+            println!(
+                "Created parquet file: {:?} ({} bytes)",
+                file.path(),
+                metadata.len()
+            );
         }
 
-        println!("CLI Parquet test passed. Created {} files", parquet_files.len());
+        println!(
+            "CLI Parquet test passed. Created {} files",
+            parquet_files.len()
+        );
     }
 
     #[test]
     fn test_cli_csv_invalid_arguments() {
         let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
 
-
         // Test missing required arguments
         let output = Command::new(CLI_APP)
-            .args(&["csv",
-                "--ssim-path", temp_file.path().to_str().unwrap()])
+            .args(&["csv", "--ssim-path", temp_file.path().to_str().unwrap()])
             .output()
             .expect("Failed to execute CLI command");
 
-        assert!(!output.status.success(), "CLI should fail with missing arguments");
+        assert!(
+            !output.status.success(),
+            "CLI should fail with missing arguments"
+        );
 
         let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(stderr.contains("required") || stderr.contains("missing"),
-                "Error message should mention missing/required arguments");
+        assert!(
+            stderr.contains("required") || stderr.contains("missing"),
+            "Error message should mention missing/required arguments"
+        );
 
         println!("CLI invalid arguments test passed");
     }
 
     #[test]
     fn test_cli_parquet_invalid_arguments() {
-
         // Test missing required arguments
         let output = Command::new(CLI_APP)
             .args(&["parquet"])
             .output()
             .expect("Failed to execute CLI command");
 
-        assert!(!output.status.success(), "CLI should fail with missing arguments");
+        assert!(
+            !output.status.success(),
+            "CLI should fail with missing arguments"
+        );
 
         let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(stderr.contains("required") || stderr.contains("missing"),
-                "Error message should mention missing/required arguments");
+        assert!(
+            stderr.contains("required") || stderr.contains("missing"),
+            "Error message should mention missing/required arguments"
+        );
 
         println!("CLI invalid arguments test passed");
     }
@@ -353,19 +416,27 @@ mod cli_tests {
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("SSIM"), "Help should mention SSIM");
-        assert!(stdout.contains("csv") || stdout.contains("parquet"),
-                "Help should mention available commands");
+        assert!(
+            stdout.contains("csv") || stdout.contains("parquet"),
+            "Help should mention available commands"
+        );
 
         println!("CLI help test passed");
     }
 
-
     #[test]
     fn test_cli_different_compressions() {
-
         let temp_file = create_temp_ssim_file(SAMPLE_SSIM_DATA);
 
-        let compressions = ["snappy", "gzip", "lz4", "zstd", "uncompressed", "brotli", "lzo"];
+        let compressions = [
+            "snappy",
+            "gzip",
+            "lz4",
+            "zstd",
+            "uncompressed",
+            "brotli",
+            "lzo",
+        ];
 
         for compression in compressions {
             let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -373,18 +444,26 @@ mod cli_tests {
             let output = Command::new(CLI_APP)
                 .args(&[
                     "parquet",
-                    "--ssim-path", temp_file.path().to_str().unwrap(),
-                    "--output-path", temp_dir.path().to_str().unwrap(),
-                    "--compression", compression,
-                    "--batch-size", "50",
-                    "--buffer-size", "8192"
+                    "--ssim-path",
+                    temp_file.path().to_str().unwrap(),
+                    "--output-path",
+                    temp_dir.path().to_str().unwrap(),
+                    "--compression",
+                    compression,
+                    "--batch-size",
+                    "50",
+                    "--buffer-size",
+                    "8192",
                 ])
                 .output()
                 .expect("Failed to execute CLI command");
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                panic!("CLI command failed with compression {}: {}", compression, stderr);
+                panic!(
+                    "CLI command failed with compression {}: {}",
+                    compression, stderr
+                );
             }
 
             let expected_ext = match compression {
@@ -397,14 +476,23 @@ mod cli_tests {
             let parquet_count = entries
                 .filter_map(|entry| entry.ok())
                 .filter(|entry| {
-                    entry.path().extension()
+                    entry
+                        .path()
+                        .extension()
                         .and_then(|ext| ext.to_str())
                         .map_or(false, |ext| ext == expected_ext)
                 })
                 .count();
 
-            assert!(parquet_count > 0, "Should create parquet files with {} compression", compression);
-            println!("Compression {} test passed: created {} files", compression, parquet_count);
+            assert!(
+                parquet_count > 0,
+                "Should create parquet files with {} compression",
+                compression
+            );
+            println!(
+                "Compression {} test passed: created {} files",
+                compression, parquet_count
+            );
         }
     }
 
@@ -416,21 +504,27 @@ mod cli_tests {
         let output = Command::new(&CLI_APP)
             .args(&[
                 "csv",
-                "--ssim-path", "nonexistent_file.ssim",
-                "--output-path", output_file.to_str().unwrap(),
+                "--ssim-path",
+                "nonexistent_file.ssim",
+                "--output-path",
+                output_file.to_str().unwrap(),
             ])
             .output()
             .expect("Failed to execute CLI command");
 
-        assert!(!output.status.success(), "CLI should fail with nonexistent input file");
+        assert!(
+            !output.status.success(),
+            "CLI should fail with nonexistent input file"
+        );
 
         let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(stderr.to_lowercase().contains("error") ||
-                    stderr.to_lowercase().contains("failed") ||
-                    stderr.to_lowercase().contains("not found"),
-                "Error message should indicate file not found");
+        assert!(
+            stderr.to_lowercase().contains("error")
+                || stderr.to_lowercase().contains("failed")
+                || stderr.to_lowercase().contains("not found"),
+            "Error message should indicate file not found"
+        );
 
         println!("CLI nonexistent file test passed");
     }
-
 }

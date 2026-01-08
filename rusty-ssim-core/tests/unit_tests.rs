@@ -74,10 +74,7 @@ mod parser_tests {
         assert_eq!(record.time_variation_arrival, "+0200");
         assert_eq!(record.passenger_terminal_arrival, "  ");
         assert_eq!(record.aircraft_type, "73H");
-        assert_eq!(
-            record.passenger_reservations_booking_designator,
-            "Y"
-        );
+        assert_eq!(record.passenger_reservations_booking_designator, "Y");
         assert_eq!(record.passenger_reservations_booking_modifier, "     ");
         assert_eq!(record.meal_service_note, "          ");
         assert_eq!(record.joint_operation_airline_designators, "         ");
