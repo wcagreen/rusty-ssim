@@ -8,7 +8,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     // Group segments by flight keys using Polars
     let grouped = segments
         .lazy()
-        .group_by([col("flight_designator"), col("control_duplicate_indicator")])
+        .group_by([col("flight_designator"), col("control_duplicate_indicator"), col("leg_sequence_number")])
         .agg([
             col("board_point_indicator"),
             col("off_point_indicator"),
@@ -22,6 +22,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     let height = grouped.height();
     let flight_designators = grouped.column("flight_designator")?.clone();
     let control_dups = grouped.column("control_duplicate_indicator")?.clone();
+    let leg_sequence_numbers = grouped.column("leg_sequence_number")?.clone();
     
     // Get list columns - extract the ChunkedArrays directly for faster access
     let board_point_ind = grouped.column("board_point_indicator")?.list()?;
@@ -109,6 +110,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     DataFrame::new(vec![
         flight_designators,
         control_dups,
+        leg_sequence_numbers,
         Series::new("segment_data".into(), json_strings).into_column(),
     ])
 }
@@ -210,8 +212,8 @@ pub(crate) fn combine_all_dataframes(
         flights_with_carrier
             .join(
                 condensed_segments.lazy(),
-                [col("flight_designator"), col("control_duplicate_indicator")],
-                [col("flight_designator"), col("control_duplicate_indicator")],
+                [col("flight_designator"), col("control_duplicate_indicator"), col("leg_sequence_number")],
+                [col("flight_designator"), col("control_duplicate_indicator"), col("leg_sequence_number")],
                 JoinArgs::new(JoinType::Left),
             )
             .with_new_streaming(true)
@@ -222,6 +224,7 @@ pub(crate) fn combine_all_dataframes(
             .join(
                 segments.lazy().select([
                     col("flight_designator"),
+                    col("leg_sequence_number"),
                     col("control_duplicate_indicator"),
                     col("board_point_indicator"),
                     col("off_point_indicator"),
@@ -230,8 +233,8 @@ pub(crate) fn combine_all_dataframes(
                     col("data_element_identifier"),
                     col("data"),
                 ]),
-                [col("flight_designator"), col("control_duplicate_indicator")],
-                [col("flight_designator"), col("control_duplicate_indicator")],
+                [col("flight_designator"), col("control_duplicate_indicator"), col("leg_sequence_number")],
+                [col("flight_designator"), col("control_duplicate_indicator"), col("leg_sequence_number")],
                 JoinArgs::new(JoinType::Left),
             )
             .with_new_streaming(true)
