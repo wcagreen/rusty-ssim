@@ -77,8 +77,21 @@ cargo build -p cli-rusty-ssim --release
 - Python 3.9+
 - Rust toolchain ([rustup.rs](https://rustup.rs))
 
-### Future Installation Options
-- Package binaries.
+### (Build CLI with Docker)
+
+Download the Dockerfile from the repo, or build one your self. 
+
+```bash
+
+# Build docker image.
+docker build --no-cache -t wcagreen/rusty-ssim:latest .
+
+# To run you can use the following command.
+docker run --rm -v "${PWD}:/data" wcagreen/rusty-ssim:latest @args
+
+# You can also just make this a permanent function for powershell, etc...
+```
+
 
 ## Documentation
 
