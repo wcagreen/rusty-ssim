@@ -79,7 +79,7 @@ cargo build -p cli-rusty-ssim --release
 
 ### (Build CLI with Docker)
 
-Fetch the dockerfile, or build one your self. You should be able to set this 
+Download the Dockerfile from the repo, or build one your self. 
 
 ```bash
 
