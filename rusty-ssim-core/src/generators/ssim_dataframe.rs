@@ -1,7 +1,8 @@
 use crate::utils::ssim_parser::{CarrierRecord, FlightLegRecord, SegmentRecords};
 use polars::prelude::*;
+use rayon::prelude::*;
 
-/// Build a Polars `DataFrame` from a slice of records.
+/// Build a Polars `DataFrame` from a slice of records, constructing columns in parallel.
 ///
 /// Each field mapping is `"column_name" => field_name,` which uses `.as_ref()`
 /// to extract a `&str` from `Cow<str>` or `String` fields.
@@ -9,25 +10,29 @@ use polars::prelude::*;
 /// For fields that are not `AsRef<str>` (e.g. `char`), use the `display` marker:
 /// `"column_name" => display field_name,` which calls `.to_string()` instead.
 macro_rules! build_dataframe {
-    ($records:expr, $($rest:tt)*) => {{
-        let mut columns: Vec<Column> = Vec::new();
-        build_dataframe!(@step $records, columns, $($rest)*);
+    ($records_expr:expr, $($rest:tt)*) => {{
+        let records = $records_expr;
+        let builders: Vec<Box<dyn Fn() -> Column + Sync + '_>> = Vec::new();
+        #[allow(unused_mut)]
+        let mut builders = builders;
+        build_dataframe!(@step records, builders, $($rest)*);
+        let columns: Vec<Column> = builders.par_iter().map(|f| f()).collect();
         DataFrame::new(columns)
     }};
-    (@step $records:expr, $columns:ident,) => {};
-    (@step $records:expr, $columns:ident, $col:expr => display $field:ident, $($rest:tt)*) => {
-        $columns.push(Column::new(
+    (@step $records:ident, $builders:ident,) => {};
+    (@step $records:ident, $builders:ident, $col:expr => display $field:ident, $($rest:tt)*) => {
+        $builders.push(Box::new(|| Column::new(
             PlSmallStr::from_static($col),
             $records.iter().map(|r| r.$field.to_string()).collect::<Vec<_>>(),
-        ));
-        build_dataframe!(@step $records, $columns, $($rest)*);
+        )));
+        build_dataframe!(@step $records, $builders, $($rest)*);
     };
-    (@step $records:expr, $columns:ident, $col:expr => $field:ident, $($rest:tt)*) => {
-        $columns.push(Column::new(
+    (@step $records:ident, $builders:ident, $col:expr => $field:ident, $($rest:tt)*) => {
+        $builders.push(Box::new(|| Column::new(
             PlSmallStr::from_static($col),
             $records.iter().map(|r| r.$field.as_ref() as &str).collect::<Vec<_>>(),
-        ));
-        build_dataframe!(@step $records, $columns, $($rest)*);
+        )));
+        build_dataframe!(@step $records, $builders, $($rest)*);
     };
 }
 
