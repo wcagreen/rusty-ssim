@@ -675,10 +675,10 @@ impl BatchProcessor for ParquetWriterProcessor {
 /// # Example
 /// ```ignore
 /// // Default behavior - each segment is a row
-/// let ssim_dataframe = ssim_to_dataframe(file_path="./ssim.dat", batch_size=10000, buffer_size=51200);
+/// let ssim_dataframe = ssim_to_dataframe(file_path="./ssim.dat", batch_size=Some(10000), buffer_size=Some(51200));
 ///
 /// // Condensed format - segment or list of json like strings (smaller file size)
-/// let ssim_dataframe = ssim_to_dataframe(file_path="./ssim.dat", batch_size=10000, buffer_size=51200, condense_segments=true);
+/// let ssim_dataframe = ssim_to_dataframe(file_path="./ssim.dat", batch_size=Some(10000), buffer_size=Some(51200), condense_segments=Some(true));
 /// ```
 pub fn ssim_to_dataframe(
     file_path: &str,
@@ -707,7 +707,7 @@ pub fn ssim_to_dataframe(
 ///  # Example
 /// ```ignore
 /// // Default behavior returns tuple of each record type as separate DataFrame)
-/// let (rt2, rt3, rt4) = ssim_to_dataframes(file_path="./ssim.dat", batch_size=10000, buffer_size=51200);
+/// let (rt2, rt3, rt4) = ssim_to_dataframes(file_path="./ssim.dat", batch_size=Some(10000), buffer_size=Some(51200));
 /// ```
 pub fn ssim_to_dataframes(
     file_path: &str,
@@ -738,10 +738,10 @@ pub fn ssim_to_dataframes(
 ///  # Example
 /// ```ignore
 /// // Default behavior - each segment is a row
-/// ssim_to_csv(file_path="./ssim.dat", output_path="./ssim.csv",  batch_size=10000, buffer_size=51200, condense_segments=false);
+/// ssim_to_csv(file_path="./ssim.dat", output_path="./ssim.csv",  batch_size=Some(10000), buffer_size=Some(51200), condense_segments=Some(false));
 ///
 /// // Condensed format - segments as JSON string (smaller file size)
-/// ssim_to_csv(file_path="./ssim.dat", output_path="./ssim_condensed.csv", batch_size=10000, buffer_size=51200, condense_segments=true);
+/// ssim_to_csv(file_path="./ssim.dat", output_path="./ssim_condensed.csv", batch_size=Some(10000), buffer_size=Some(51200), condense_segments=Some(true));
 /// ```
 pub fn ssim_to_csv(
     file_path: &str,
@@ -774,10 +774,10 @@ pub fn ssim_to_csv(
 /// # Example
 /// ```ignore
 /// // Default behavior - each segment is a row
-/// ssim_to_parquets(file_path="./ssim.dat", output_path=".", compression="uncompressed", batch_size=10000, buffer_size=51200, condense_segments=false);
+/// ssim_to_parquets(file_path="./ssim.dat", output_path=".", compression="uncompressed", batch_size=Some(10000), buffer_size=Some(51200), condense_segments=Some(false));
 ///
 /// // Condensed format - segments as JSON string (smaller file size)
-/// ssim_to_parquets(file_path="./ssim.dat", output_path=".", compression="zstd", batch_size=10000, buffer_size=51200, condense_segments=true);
+/// ssim_to_parquets(file_path="./ssim.dat", output_path=".", compression="zstd", batch_size=Some(10000), buffer_size=Some(51200), condense_segments=Some(true));
 /// ```
 pub fn ssim_to_parquets(
     file_path: &str,
