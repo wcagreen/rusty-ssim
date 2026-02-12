@@ -16,7 +16,6 @@ polars.workspace = true
 
 [lib]
 name = "rustyssim"
-crate-type = ["lib"]
 
 [dev-dependencies]
 tempfile = { version = "3.20.0" }
