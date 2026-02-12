@@ -1,0 +1,18 @@
+[package]
+name = "rustyssim"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "An IATA SSIM file parser tool that will convert ssim file to polars dataframe."
+readme = "../README.md"
+
+
+[dependencies]
+rusty-ssim-core.workspace = true
+polars.workspace = true
+
+[lib]
+name = "rustyssim"
+crate-type = ["cdylib"]
