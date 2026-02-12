@@ -5,7 +5,8 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Core Library that serves as the backbone for SSIM parser."
+description = "Internal core library for rustyssim. Not intended for direct use — use the rustyssim crate or python package instead."
+readme = "README.md"
 
 [dependencies]
 polars.workspace = true
