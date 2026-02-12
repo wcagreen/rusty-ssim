@@ -5,7 +5,8 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "An IATA SSIM file parser tool that will convert ssim file to polars dataframe."
+description = "A high-performance IATA SSIM (Standard Schedules Information Manual) parser. Parses SSIM files into Polars DataFrames or exports to CSV/Parquet."
+keywords = ["ssim", "iata", "aviation", "parser"]
 readme = "../README.md"
 
 
