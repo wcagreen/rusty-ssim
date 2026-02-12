@@ -39,3 +39,10 @@
 
 // Re-export the public API
 pub use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
+
+/// Re-exported [Polars](https://pola.rs) crate for working with the DataFrames
+/// returned by this library.
+///
+/// Includes ["lazy", "parquet", "dtype-struct", "ipc", "performant", "json"] needed by rustyssim.
+/// For additional features, add `polars` directly to your `Cargo.toml` —
+pub use polars;
