@@ -37,8 +37,5 @@
 //! - **`buffer_size`**: File read buffer in bytes. Increase for large files.
 //!   Default: `8,192` (8 KB). Try `131,072` (128 KB) for large files.
 
-
 // Re-export the public API
-pub use rusty_ssim_core::{
-    ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets,
-};
+pub use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
