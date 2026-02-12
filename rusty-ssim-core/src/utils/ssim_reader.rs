@@ -663,7 +663,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 // Public API Functions
 // ============================================================================
 
-/// Parse SSIM file into a single combined DataFrame.
+/// Parse SSIM file into a single combined DataFrame. Record Types 2, 3, and 4 are merged into one DataFrame with appropriate joins.
 ///
 /// # Arguments
 /// * `file_path` - Path to the SSIM file
@@ -697,7 +697,7 @@ pub fn ssim_to_dataframe(
     Ok(processor.into_result())
 }
 
-/// Parse SSIM file into three separate DataFrames.
+/// Parse SSIM file into three separate DataFrames based on record types i.e. 2, 3, and 4 from the SSIM file.
 ///
 /// # Arguments
 /// * `file_path` - Path to the SSIM file
