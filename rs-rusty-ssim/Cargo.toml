@@ -10,9 +10,17 @@ keywords = ["ssim", "iata", "aviation", "parser"]
 readme = "README.md"
 
 
+[features]
+default = ["performant"]
+performant = ["polars/performant", "rusty-ssim-core/performant"]
+
 [dependencies]
 rusty-ssim-core.workspace = true
 polars.workspace = true
+
+[package.metadata.docs.rs]
+no-default-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]
 name = "rustyssim"
