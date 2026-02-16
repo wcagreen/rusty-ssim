@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 description = "A high-performance IATA SSIM (Standard Schedules Information Manual) parser. Parses SSIM files into Polars DataFrames or exports to CSV/Parquet."
 keywords = ["ssim", "iata", "aviation", "parser"]
-readme = "../README.md"
+readme = "README.md"
 
 
 [dependencies]
