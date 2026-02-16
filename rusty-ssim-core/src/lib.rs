@@ -1,3 +1,12 @@
+//! # rusty-ssim-core
+//!
+//! **This is an internal implementation crate for [`rustyssim`](https://crates.io/crates/rustyssim) and its [python version](https://pypi.org/project/rustyssim/).**
+//!
+//! **You should not depend on this crate directly.** Use
+//! [`rustyssim`](https://crates.io/crates/rustyssim) instead.
+//!
+//! Internal APIs may change without notice across minor versions.
+
 pub mod records {
     pub mod carrier_record;
     pub mod flight_leg_records;

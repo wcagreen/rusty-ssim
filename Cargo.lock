@@ -2695,6 +2695,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustyssim"
+version = "0.5.2"
+dependencies = [
+ "polars",
+ "polars-testing",
+ "rand",
+ "rusty-ssim-core",
+ "tempfile",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
