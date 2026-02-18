@@ -3,7 +3,7 @@ members = [ "rusty-ssim-core", "cli-rusty-ssim", "py-rusty-ssim", "rs-rusty-ssim
 resolver = "3"
 
 [workspace.package]
-version = "0.5.2"
+version = "0.5.3"
 authors = ["William Green"]
 edition = "2024"
 license = "MIT"
