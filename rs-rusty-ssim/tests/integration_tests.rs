@@ -240,7 +240,7 @@ mod integration_tests {
         );
 
         let df = result.unwrap();
-        assert!(!df.is_empty(), "DataFrame should not be empty");
+        assert!(df.height() > 0, "DataFrame should not be empty");
 
         // Check that we have the expected columns count.
         let column_names = df.get_column_names();
@@ -265,7 +265,7 @@ mod integration_tests {
 
         // Check carriers DataFrame
         assert!(
-            !carriers_df.is_empty(),
+            carriers_df.height() > 0,
             "Carriers DataFrame should not be empty"
         );
         assert_eq!(carriers_df.get_column_names().len(), 16);
@@ -273,14 +273,14 @@ mod integration_tests {
 
         // Check flights DataFrame
         assert!(
-            !flights_df.is_empty(),
+            flights_df.height() > 0,
             "Flights DataFrame should not be empty"
         );
         assert_eq!(flights_df.get_column_names().len(), 47);
         assert_eq!(flights_df.height(), 20);
 
         assert!(
-            !segments_df.is_empty(),
+            segments_df.height() > 0,
             "For this test, segments should not be empty"
         );
         assert_eq!(segments_df.get_column_names().len(), 16);
@@ -299,7 +299,7 @@ mod integration_tests {
         );
 
         let df = result.unwrap();
-        assert!(!df.is_empty(), "DataFrame should not be empty");
+        assert!(df.height() > 0, "DataFrame should not be empty");
 
         let unique_carriers = df
             .clone()
