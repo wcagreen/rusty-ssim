@@ -60,6 +60,8 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          python -m pip install -U pip
+          python -m pip --version
           pip install uv
           # Install typing-extensions separately whilst the `--extra-index-url` in `requirements-ci.txt`
           # doesn't have an up-to-date typing-extensions, see
