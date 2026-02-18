@@ -8,19 +8,11 @@ repository.workspace = true
 description = "Internal core library for rustyssim. Not intended for direct use — use the rustyssim crate or python package instead."
 readme = "README.md"
 
-[features]
-default = ["performant"]
-performant = ["polars/performant"]
-
 [dependencies]
 polars.workspace = true
 serde.workspace = true
 rand.workspace = true
 rayon = "1.11.0"
-
-[package.metadata.docs.rs]
-no-default-features = true
-rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]
 name = "rusty_ssim_core"

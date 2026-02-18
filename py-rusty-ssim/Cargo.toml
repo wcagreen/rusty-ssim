@@ -15,6 +15,7 @@ rusty-ssim-core.workspace = true
 [lib]
 name = "rustyssim"
 crate-type = ["cdylib"]
+doc = false
 
 [package.metadata.maturin]
 module-name = "rustyssim.rustyssim"
