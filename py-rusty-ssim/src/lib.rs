@@ -24,7 +24,7 @@ fn parse_ssim_to_csv(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PyResult<()> {
-    py.allow_threads(|| {
+    py.detach(|| {
         ssim_to_csv(
             file_path,
             output_path,
@@ -47,7 +47,7 @@ fn parse_ssim_to_parquets(
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
 ) -> PyResult<()> {
-    py.allow_threads(|| {
+    py.detach(|| {
         ssim_to_parquets(
             file_path,
             output_path,
@@ -69,7 +69,7 @@ fn split_ssim_to_dataframes(
     buffer_size: Option<usize>,
 ) -> PyResult<(PyDataFrame, PyDataFrame, PyDataFrame)> {
     let (carrier_df, flights_df, segments_df) = py
-        .allow_threads(|| ssim_to_dataframes(file_path, batch_size, buffer_size))
+        .detach(|| ssim_to_dataframes(file_path, batch_size, buffer_size))
         .map_err(|e| value_error(e.to_string()))?;
 
     Ok((
@@ -89,7 +89,7 @@ fn parse_ssim_to_dataframe(
     condense_segments: Option<bool>,
 ) -> PyResult<PyDataFrame> {
     let ssim_dataframe = py
-        .allow_threads(|| ssim_to_dataframe(file_path, batch_size, buffer_size, condense_segments))
+        .detach(|| ssim_to_dataframe(file_path, batch_size, buffer_size, condense_segments))
         .map_err(|e| value_error(e.to_string()))?;
 
     Ok(PyDataFrame(ssim_dataframe))
