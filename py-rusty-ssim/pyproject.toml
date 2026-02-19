@@ -6,13 +6,13 @@ build-backend = "maturin"
 name = "rustyssim"
 description = "This package provides a Python interface to parse SSIM files into a Polars DataFrame."
 
-version = "0.5.2"
+version = "0.5.3"
 readme = "README.md"
 authors = [
     { name = "William Green", email = "wcagreen24@gmail.com" },
 ]
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 keywords = ["parsing", "ssim", "data"]
 classifiers = [
@@ -22,7 +22,6 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -32,7 +31,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "polars >= 1.36.1"
+    "polars >= 1.38.1"
 ]
 
 [dependency-groups]

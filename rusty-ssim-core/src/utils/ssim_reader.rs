@@ -369,7 +369,7 @@ impl BatchProcessor for CombinedDataFrameProcessor {
 
         let batch_df =
             combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
-        if !batch_df.is_empty() {
+        if batch_df.height() > 0 {
             self.batches.push(batch_df);
         }
         Ok(())
@@ -426,13 +426,13 @@ impl BatchProcessor for SplitDataFrameProcessor {
         let (carrier_df, flight_df, segment_df) =
             convert_to_dataframes(carrier, flight_batch, segment_batch)?;
 
-        if !carrier_df.is_empty() {
+        if carrier_df.height() > 0 {
             self.carrier_batches.push(carrier_df);
         }
-        if !flight_df.is_empty() {
+        if flight_df.height() > 0 {
             self.flight_batches.push(flight_df);
         }
-        if !segment_df.is_empty() {
+        if segment_df.height() > 0 {
             self.segment_batches.push(segment_df);
         }
         Ok(())
@@ -642,7 +642,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 
         let batch_df =
             combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
-        if !batch_df.is_empty() {
+        if batch_df.height() > 0 {
             self.accumulated_batches.push(batch_df);
         }
         Ok(())
