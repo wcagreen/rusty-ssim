@@ -17,7 +17,7 @@ macro_rules! build_dataframe {
         let mut builders = builders;
         build_dataframe!(@step records, builders, $($rest)*);
         let columns: Vec<Column> = builders.par_iter().map(|f| f()).collect();
-        DataFrame::new(records.len(), columns)
+        DataFrame::new_infer_height(columns)
     }};
     (@step $records:ident, $builders:ident,) => {};
     (@step $records:ident, $builders:ident, $col:expr => display $field:ident, $($rest:tt)*) => {
