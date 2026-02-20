@@ -114,7 +114,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
     }
 
     // Build the condensed DataFrame with just 3 columns
-    DataFrame::new(height, vec![
+    DataFrame::new_infer_height(vec![
         flight_designators,
         control_dups,
         leg_sequence_numbers,
