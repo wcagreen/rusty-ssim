@@ -1,14 +1,10 @@
 use polars::error::PolarsResult;
-use polars::prelude::{
-    DataFrame, IntoColumn, IntoLazy, JoinArgs, JoinType, NamedFrom, Series, col, cols,
-};
-use std::fmt::Write;
+use polars::prelude::*;
 
 /// Condenses segments DataFrame by grouping and serializing to JSON strings.
 /// This reduces memory by converting List<Struct> to a single JSON string per flight.
 fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
-    // Group segments by flight keys using Polars
-    let grouped = segments
+    let mut grouped = segments
         .lazy()
         .group_by([
             col("flight_designator"),
@@ -16,163 +12,42 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
             col("leg_sequence_number"),
         ])
         .agg([
-            col("board_point_indicator"),
-            col("off_point_indicator"),
-            col("board_point"),
-            col("off_point"),
-            col("data_element_identifier"),
-            col("data"),
+            as_struct(vec![
+                col("board_point_indicator"),
+                col("off_point_indicator"),
+                col("board_point"),
+                col("off_point"),
+                col("data_element_identifier"),
+                col("data"),
+            ])
+            .alias("segment_data"),
         ])
         .collect()?;
 
-    let height = grouped.height();
-    let flight_designators = grouped.column("flight_designator")?.clone();
-    let control_dups = grouped.column("control_duplicate_indicator")?.clone();
-    let leg_sequence_numbers = grouped.column("leg_sequence_number")?.clone();
+    let segment_col = grouped.drop_in_place("segment_data")?;
+    
+    let mut temp_df = DataFrame::new_infer_height(vec![segment_col.into_column()])?;
+    let mut buf = Vec::new();
+    polars::io::json::JsonWriter::new(&mut buf)
+        .with_json_format(polars::io::json::JsonFormat::JsonLines)
+        .finish(&mut temp_df)?;
 
-    // Get list columns - extract the ChunkedArrays directly for faster access
-    let board_point_ind = grouped.column("board_point_indicator")?.list()?;
-    let off_point_ind = grouped.column("off_point_indicator")?.list()?;
-    let board_point = grouped.column("board_point")?.list()?;
-    let off_point = grouped.column("off_point")?.list()?;
-    let dei = grouped.column("data_element_identifier")?.list()?;
-    let data_col = grouped.column("data")?.list()?;
 
-    // Pre-allocate with estimated capacity
-    let mut json_strings: Vec<String> = Vec::with_capacity(height);
-
-    for i in 0..height {
-        // Allocate per-row buffer (reusing would require clearing)
-        let mut json_buffer = String::with_capacity(1024);
-        json_buffer.push('[');
-
-        // Get the Series for each list column at row i
-        if let (Some(bpi), Some(opi), Some(bp), Some(bo), Some(d), Some(da)) = (
-            board_point_ind.get_as_series(i),
-            off_point_ind.get_as_series(i),
-            board_point.get_as_series(i),
-            off_point.get_as_series(i),
-            dei.get_as_series(i),
-            data_col.get_as_series(i),
-        ) {
-            let len = bpi.len();
-
-            // Get string chunked arrays for direct access
-            let bpi_ca = bpi.str().ok();
-            let opi_ca = opi.str().ok();
-            let bp_ca = bp.str().ok();
-            let bo_ca = bo.str().ok();
-            let d_ca = d.str().ok();
-            let da_ca = da.str().ok();
-
-            for j in 0..len {
-                if j > 0 {
-                    json_buffer.push(',');
-                }
-                json_buffer.push('{');
-
-                let mut first = true;
-
-                // Optimized field writing with minimal allocations
-                macro_rules! write_field {
-                    ($ca:expr, $name:literal) => {
-                        if let Some(ca) = &$ca {
-                            if let Some(s) = ca.get(j) {
-                                if !first {
-                                    json_buffer.push(',');
-                                }
-                                #[allow(unused_assignments)]
-                                {
-                                    first = false;
-                                }
-                                json_buffer.push('"');
-                                json_buffer.push_str($name);
-                                json_buffer.push_str("\":\"");
-                                escape_json_into(&mut json_buffer, s);
-                                json_buffer.push('"');
-                            }
-                        }
-                    };
-                }
-
-                write_field!(bpi_ca, "board_point_indicator");
-                write_field!(opi_ca, "off_point_indicator");
-                write_field!(bp_ca, "board_point");
-                write_field!(bo_ca, "off_point");
-                write_field!(d_ca, "data_element_identifier");
-                write_field!(da_ca, "data");
-
-                json_buffer.push('}');
-            }
-        }
-
-        json_buffer.push(']');
-
-        // Escape the entire JSON string to make it CSV-safe
-        let escaped_json = escape_for_csv(&json_buffer);
-        json_strings.push(escaped_json);
-    }
-
-    // Build the condensed DataFrame with just 3 columns
-    DataFrame::new_infer_height(vec![
-        flight_designators,
-        control_dups,
-        leg_sequence_numbers,
-        Series::new("segment_data".into(), json_strings).into_column(),
-    ])
-}
-
-/// Escapes a JSON string to be safe for CSV output by wrapping in quotes
-/// and escaping internal quotes
-#[inline]
-fn escape_for_csv(s: &str) -> String {
-    // Check if escaping is needed (contains comma, quote, or newline)
-    if s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r') {
-        let mut result = String::with_capacity(s.len() + 10);
-        result.push('"');
-        for c in s.chars() {
-            if c == '"' {
-                result.push_str("\"\""); // CSV doubles quotes
+    let json_strings: Vec<String> = String::from_utf8(buf)
+        .unwrap()
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim();
+            if let Some(start) = trimmed.find('[') {
+                trimmed[start..trimmed.len() - 1].to_string()
             } else {
-                result.push(c);
+                "[]".to_string()
             }
-        }
-        result.push('"');
-        result
-    } else {
-        s.to_string()
-    }
-}
+        })
+        .collect();
 
-/// Escapes special JSON characters directly into a String buffer (zero-copy when possible)
-#[inline]
-fn escape_json_into(buffer: &mut String, s: &str) {
-    // Fast path: check if any escaping is needed
-    if !s
-        .bytes()
-        .any(|b| matches!(b, b'"' | b'\\' | b'\n' | b'\r' | b'\t' | b'\x00'..=b'\x1F'))
-    {
-        buffer.push_str(s);
-        return;
-    }
-
-    // Slow path: escape characters
-    for c in s.chars() {
-        match c {
-            '"' => buffer.push_str("\\\""),
-            '\\' => buffer.push_str("\\\\"),
-            '\n' => buffer.push_str("\\n"),
-            '\r' => buffer.push_str("\\r"),
-            '\t' => buffer.push_str("\\t"),
-            '\x08' => buffer.push_str("\\b"),
-            '\x0C' => buffer.push_str("\\f"),
-            c if c.is_control() => {
-                // Unicode escape for other control characters
-                let _ = write!(buffer, "\\u{:04x}", c as u32);
-            }
-            _ => buffer.push(c),
-        }
-    }
+    grouped.with_column(Series::new("segment_data".into(), json_strings).into_column())?;
+    Ok(grouped)
 }
 
 /// Combines Carrier, Flight, and Segment DataFrames into a single DataFrame.
