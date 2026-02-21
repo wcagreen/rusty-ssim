@@ -1,10 +1,9 @@
 use polars::error::PolarsResult;
 use polars::prelude::*;
 
-/// Condenses segments DataFrame by grouping and serializing to JSON strings.
-/// This reduces memory by converting List<Struct> to a single JSON string per flight.
+/// Condenses segments DataFrame into List<Struct> per flight
 fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
-    let mut grouped = segments
+    let grouped = segments
         .lazy()
         .group_by([
             col("flight_designator"),
@@ -24,29 +23,6 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
         ])
         .collect()?;
 
-    let segment_col = grouped.drop_in_place("segment_data")?;
-    
-    let mut temp_df = DataFrame::new_infer_height(vec![segment_col.into_column()])?;
-    let mut buf = Vec::new();
-    polars::io::json::JsonWriter::new(&mut buf)
-        .with_json_format(polars::io::json::JsonFormat::JsonLines)
-        .finish(&mut temp_df)?;
-
-
-    let json_strings: Vec<String> = String::from_utf8(buf)
-        .unwrap()
-        .lines()
-        .map(|line| {
-            let trimmed = line.trim();
-            if let Some(start) = trimmed.find('[') {
-                trimmed[start..trimmed.len() - 1].to_string()
-            } else {
-                "[]".to_string()
-            }
-        })
-        .collect();
-
-    grouped.with_column(Series::new("segment_data".into(), json_strings).into_column())?;
     Ok(grouped)
 }
 
@@ -56,7 +32,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
 /// * `carrier` - DataFrame containing Carrier records.
 /// * `flights` - DataFrame containing Flight Leg records.
 /// * `segments` - DataFrame containing Segment records.
-/// * `condense_segments` - If true, aggregates all segments per flight into a single JSON string
+/// * `condense_segments` - If true, aggregates all segments per flight into a List<Struct>
 ///   column called `segment_data`. This reduces file size and memory but changes the output format.
 ///   If false (default), each segment remains as a separate row with individual columns.
 ///
@@ -71,7 +47,7 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
 /// // Default behavior - flat format (each segment is a row)
 /// let combined_df = combine_all_dataframes(carrier_df, flights_df, segments_df, false)?;
 ///
-/// // Condensed format - segments as JSON string (smaller file size)
+/// // Condensed format - segments as List<Struct> (smaller file size)
 /// let combined_df = combine_all_dataframes(carrier_df, flights_df, segments_df, true)?;
 /// ```
 pub(crate) fn combine_all_dataframes(
@@ -99,7 +75,7 @@ pub(crate) fn combine_all_dataframes(
         );
 
     if condense_segments {
-        // Condense segments to JSON strings - reduces file size and memory
+        // Condense segments to List<Struct> per flight
         let condensed_segments = condense_segments_to_json(segments)?;
 
         flights_with_carrier
