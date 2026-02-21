@@ -2,7 +2,7 @@ use polars::error::PolarsResult;
 use polars::prelude::*;
 
 /// Condenses segments DataFrame into List<Struct> per flight
-fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
+fn condense_segments_to_structs(segments: DataFrame) -> PolarsResult<DataFrame> {
     let grouped = segments
         .lazy()
         .group_by([
@@ -24,6 +24,37 @@ fn condense_segments_to_json(segments: DataFrame) -> PolarsResult<DataFrame> {
         .collect()?;
 
     Ok(grouped)
+}
+
+/// Serializes the `segment_data` List<Struct> column to JSON strings for CSV compatibility.
+/// CSV cannot represent nested types natively, so this will convert `segment_data` into a `String` column where each cell contains a JSON
+/// array string, e.g. `[{"board_point":"LHR","off_point":"JFK",...},...]`.
+///
+/// This is only nneeded if `condense_segments` is true and you want to export to CSV. If exporting to Parquet, you can keep the nested List<Struct> format without serialization.
+/// 
+pub(crate) fn serialize_segment_data_to_json(df: DataFrame) -> PolarsResult<DataFrame> {
+    let mut df = df
+        .lazy()
+        .with_column(
+            col("segment_data")
+                .list()
+                .eval(col("").struct_().json_encode())
+                .list()
+                .join(lit(","), false)
+                .alias("segment_data"),
+        )
+        .collect()?;
+
+    let wrapped = df
+        .column("segment_data")?
+        .str()?
+        .apply(|opt| opt.map(|v| format!("[{}]", v).into()))
+        .into_series()
+        .with_name("segment_data".into());
+
+    df.replace("segment_data", wrapped.into())?;
+
+    Ok(df)
 }
 
 /// Combines Carrier, Flight, and Segment DataFrames into a single DataFrame.
@@ -76,7 +107,7 @@ pub(crate) fn combine_all_dataframes(
 
     if condense_segments {
         // Condense segments to List<Struct> per flight
-        let condensed_segments = condense_segments_to_json(segments)?;
+        let condensed_segments = condense_segments_to_structs(segments)?;
 
         flights_with_carrier
             .join(

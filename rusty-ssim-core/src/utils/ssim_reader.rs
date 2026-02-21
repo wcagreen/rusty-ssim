@@ -7,7 +7,7 @@
 //! - Streaming CSV output
 //! - Per-carrier Parquet output
 
-use crate::converters::ssim_polars::combine_all_dataframes;
+use crate::converters::ssim_polars::{combine_all_dataframes, serialize_segment_data_to_json};
 use crate::generators::ssim_dataframe::convert_to_dataframes;
 use crate::records::carrier_record::CarrierRecord;
 use crate::records::flight_leg_records::FlightLegRecord;
@@ -497,7 +497,14 @@ impl CsvWriterProcessor {
         Ok(())
     }
 
-    fn write_dataframe(&mut self, mut df: DataFrame) -> PolarsResult<()> {
+    fn write_dataframe(&mut self, df: DataFrame) -> PolarsResult<()> {
+
+        let mut df = if self.condense_segments {
+                serialize_segment_data_to_json(df)?
+            } else {
+                df
+            };
+
         // Write directly to file using Polars CsvWriter - no intermediate buffer
         CsvWriter::new(&mut self.file)
             .include_header(!self.headers_written)
