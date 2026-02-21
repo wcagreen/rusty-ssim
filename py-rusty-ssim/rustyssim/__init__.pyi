@@ -29,7 +29,8 @@ def parse_ssim_to_dataframe(
         file_path: str,
         batch_size: int = 10000,
         buffer_size: int = 8192,
-        condense_segments: bool = False
+        condense_segments: bool = False,
+        serialize_segments: bool = False
 ) -> pl.DataFrame:
     """
     Parse SSIM file into a single Polars DataFrame containing Record Type 3 and 4.
@@ -41,6 +42,8 @@ def parse_ssim_to_dataframe(
             For larger files, consider using 131072 (128KB) for better performance.
         condense_segments (bool, optional): If True, condense multiple segments for the same flight into a single column/row in list of json format.
             Defaults to False. This can reduce number of rows and improve performance as well file size.
+            serialize_segments (bool, optional): If True, serialize segments into a JSON column per flight.
+                Defaults to False. This can reduce file size.
 
     Returns:
         polars.DataFrame: DataFrame containing Record Type 3 and 4 info.
@@ -50,6 +53,7 @@ def parse_ssim_to_dataframe(
         >>> ssim_dataframe = parse_ssim_to_dataframe("path/to/ssim_file.ssim", batch_size=5000)
         >>> ssim_dataframe = parse_ssim_to_dataframe("path/to/ssim_file.ssim", buffer_size=128 * 1024)
         >>> ssim_dataframe = parse_ssim_to_dataframe("path/to/ssim_file.ssim", condense_segments=True)
+        >>> ssim_dataframe = parse_ssim_to_dataframe("path/to/ssim_file.ssim", condense_segments=True, serialize_segments=True)
     """
     ...
 
@@ -89,7 +93,8 @@ def parse_ssim_to_parquets(
         compression: Optional[str] = "uncompressed",
         batch_size: int = 10000,
         buffer_size: int = 8192,
-        condense_segments: bool = False
+        condense_segments: bool = False,
+        serialize_segments: bool = False
 ) -> None:
     """
     Parse SSIM file and write contents to parquet files.
@@ -104,6 +109,8 @@ def parse_ssim_to_parquets(
             For larger files, consider using 131072 (128KB) for better performance.
         condense_segments (bool, optional): If True, condense multiple segments for the same flight into a single column/row in list of json format.
             Defaults to False. This can reduce number of rows and improve performance as well file size.
+        serialize_segments (bool, optional): If True, serialize segments into a JSON column per flight.
+            Defaults to False. This can reduce file size.
 
     Returns:
         None: Files are written to disk.
@@ -114,5 +121,6 @@ def parse_ssim_to_parquets(
         >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", "./output_path", "zstd", batch_size=5000)
         >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", buffer_size=128 * 1024)
         >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", buffer_size=128 * 1024, condense_segments=True)
+        >>> parse_ssim_to_parquets("path/to/ssim_file.ssim", buffer_size=128 * 1024, condense_segments=True, serialize_segments=True)
     """
     ...
