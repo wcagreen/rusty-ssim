@@ -59,7 +59,7 @@ fn condense_segments_to_structs(segments: DataFrame) -> PolarsResult<DataFrame> 
                 col("data"),
             ])
             .alias("segment_data"),
-        ])
+        ]).with_new_streaming(true)
         .collect()?;
 
     Ok(grouped)
@@ -81,7 +81,7 @@ pub(crate) fn serialize_segment_data_to_json(df: DataFrame) -> PolarsResult<Data
                 .list()
                 .join(lit(","), false)
                 .alias("segment_data"),
-        )
+        ).with_new_streaming(true)
         .collect()?;
 
     let wrapped = df
