@@ -1,7 +1,46 @@
 use polars::error::PolarsResult;
 use polars::prelude::*;
 
-/// Condenses segments DataFrame into List<Struct> per flight
+/// Aggregates raw segment rows into a nested list structure keyed by flight.
+///
+/// When the caller wishes to "condense" the segment data, every record in the
+/// supplied `segments` DataFrame is grouped by the combination of
+/// `flight_designator`, `control_duplicate_indicator` and
+/// `leg_sequence_number`.  Instead of returning a flat table with one row per
+/// individual segment, the output DataFrame contains one row per unique flight
+/// key.  All of the original segment columns are collected into a single
+/// `List<Struct>` column named `segment_data` where each struct holds the
+/// fields listed below:
+///
+/// * `board_point_indicator`
+/// * `off_point_indicator`
+/// * `board_point`
+/// * `off_point`
+/// * `data_element_identifier`
+/// * `data`
+///
+/// The resulting column can be serialized to JSON (see
+/// [`serialize_segment_data_to_json`]) for CSV output or kept in its nested form
+/// for parquet/Polars-native workflows.
+///
+/// # Arguments
+///
+/// * `segments` - a DataFrame containing the raw segment records produced by
+///   the parser.  The caller is responsible for ensuring the necessary columns
+///   are present; they are not validated by this helper.
+///
+/// # Returns
+///
+/// A `PolarsResult<DataFrame>` holding the grouped and nested output.  On
+/// failure, the error will propagate from the underlying lazy execution and
+/// collection process.
+///
+/// # Example
+///
+/// ```ignore
+/// let condensed = condense_segments_to_structs(segments_df)?;
+///
+/// ```
 fn condense_segments_to_structs(segments: DataFrame) -> PolarsResult<DataFrame> {
     let grouped = segments
         .lazy()
