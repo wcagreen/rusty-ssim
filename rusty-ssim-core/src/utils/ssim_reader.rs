@@ -695,7 +695,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 /// * `buffer_size` - Optional buffer size for reading
 /// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller output).
 ///   If false (default), each segment is a separate row.
-/// * `serialize_segments` - If true, serializes segment data to JSON string (only applicable if condense_segments is true).
+/// * `serialize_segments` - If true , serializes segment data to JSON string (only applicable if condense_segments is true).
 ///
 /// # Example
 /// ```ignore
@@ -760,6 +760,7 @@ pub fn ssim_to_dataframes(
 /// * `buffer_size` - Optional buffer size for reading
 /// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller file).
 ///   If false (default), each segment is a separate row.
+/// 
 ///
 ///  # Example
 /// ```ignore
