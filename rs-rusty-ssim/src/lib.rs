@@ -9,7 +9,7 @@
 //! ```no_run
 //! use rustyssim::ssim_to_dataframe;
 //!
-//! let df = ssim_to_dataframe("schedule.ssim", Some(10000), Some(8192), Some(false))
+//! let df = ssim_to_dataframe("schedule.ssim", Some(10000), Some(8192), Some(false), Some(false))
 //!     .expect("Failed to parse SSIM file");
 //!
 //! println!("Parsed {} flight records", df.height());

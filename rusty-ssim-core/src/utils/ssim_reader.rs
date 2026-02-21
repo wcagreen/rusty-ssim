@@ -335,14 +335,16 @@ pub struct CombinedDataFrameProcessor {
     batches: Vec<DataFrame>,
     result: Option<DataFrame>,
     condense_segments: bool,
+    serialize_segments: bool,
 }
 
 impl CombinedDataFrameProcessor {
-    pub fn new(condense_segments: bool) -> Self {
+    pub fn new(condense_segments: bool, serialize_segments: bool) -> Self {
         Self {
             batches: Vec::new(),
             result: None,
             condense_segments,
+            serialize_segments,
         }
     }
 
@@ -353,7 +355,7 @@ impl CombinedDataFrameProcessor {
 
 impl Default for CombinedDataFrameProcessor {
     fn default() -> Self {
-        Self::new(false)
+        Self::new(false, true)
     }
 }
 
@@ -370,7 +372,12 @@ impl BatchProcessor for CombinedDataFrameProcessor {
         let batch_df =
             combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if batch_df.height() > 0 {
-            self.batches.push(batch_df);
+            if self.condense_segments && self.serialize_segments {
+                let batch_df = serialize_segment_data_to_json(batch_df)?;
+                self.batches.push(batch_df);
+            } else {
+                self.batches.push(batch_df);
+            }
         }
         Ok(())
     }
@@ -547,6 +554,7 @@ pub struct ParquetWriterProcessor {
     /// Stores (airline_designator, control_duplicate_indicator) for filename generation
     current_carrier_info: Option<(String, String)>,
     condense_segments: bool,
+    serialize_segments: bool,
 }
 
 impl ParquetWriterProcessor {
@@ -554,6 +562,7 @@ impl ParquetWriterProcessor {
         output_path: &str,
         compression: Option<&str>,
         condense_segments: bool,
+        serialize_segments: bool,
     ) -> PolarsResult<Self> {
         let path = Path::new(output_path);
 
@@ -580,6 +589,7 @@ impl ParquetWriterProcessor {
             accumulated_batches: Vec::new(),
             current_carrier_info: None,
             condense_segments,
+            serialize_segments,
         })
     }
 
@@ -618,6 +628,10 @@ impl ParquetWriterProcessor {
 
         // Concat all batches for this carrier
         let mut combined_df = concat_dataframes(std::mem::take(&mut self.accumulated_batches))?;
+
+        if self.condense_segments && self.serialize_segments {
+            combined_df = serialize_segment_data_to_json(combined_df)?;
+        }
 
         to_parquet(
             &mut combined_df,
@@ -692,6 +706,7 @@ pub fn ssim_to_dataframe(
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
+    serialize_segments: Option<bool>,
 ) -> PolarsResult<DataFrame> {
     let mut reader =
         SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
@@ -699,7 +714,7 @@ pub fn ssim_to_dataframe(
             msg: None,
         })?;
 
-    let mut processor = CombinedDataFrameProcessor::new(condense_segments.unwrap_or(false));
+    let mut processor = CombinedDataFrameProcessor::new(condense_segments.unwrap_or(false), serialize_segments.unwrap_or(true));
     reader.process(&mut processor)?;
     Ok(processor.into_result())
 }
@@ -793,6 +808,7 @@ pub fn ssim_to_parquets(
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
+    serialize_segments: Option<bool>,
 ) -> PolarsResult<()> {
     let mut reader =
         SsimReader::new(file_path, batch_size, buffer_size).map_err(|e| PolarsError::IO {
@@ -804,6 +820,7 @@ pub fn ssim_to_parquets(
         output_path.unwrap_or("."),
         compression,
         condense_segments.unwrap_or(false),
+        serialize_segments.unwrap_or(true),
     )?;
     reader.process(&mut processor)
 }

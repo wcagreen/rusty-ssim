@@ -37,7 +37,7 @@ fn parse_ssim_to_csv(
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, output_path=".", compression="uncompressed", batch_size=10000, buffer_size=8192, condense_segments=false))]
+#[pyo3(signature = (file_path, output_path=".", compression="uncompressed", batch_size=10000, buffer_size=8192, condense_segments=false, serialize_segments=false))]
 fn parse_ssim_to_parquets(
     py: Python<'_>,
     file_path: &str,
@@ -46,6 +46,7 @@ fn parse_ssim_to_parquets(
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
+    serialize_segments: Option<bool>,
 ) -> PyResult<()> {
     py.detach(|| {
         ssim_to_parquets(
@@ -55,6 +56,7 @@ fn parse_ssim_to_parquets(
             batch_size,
             buffer_size,
             condense_segments,
+            serialize_segments
         )
     })
     .map_err(|e| runtime_error(format!("Failed to process SSIM file: {}", e)))
@@ -80,16 +82,17 @@ fn split_ssim_to_dataframes(
 }
 
 #[pyfunction]
-#[pyo3(signature = (file_path, batch_size=10000, buffer_size=8192, condense_segments=false))]
+#[pyo3(signature = (file_path, batch_size=10000, buffer_size=8192, condense_segments=false, serialize_segments=false))]
 fn parse_ssim_to_dataframe(
     py: Python<'_>,
     file_path: &str,
     batch_size: Option<usize>,
     buffer_size: Option<usize>,
     condense_segments: Option<bool>,
+    serialize_segments: Option<bool>
 ) -> PyResult<PyDataFrame> {
     let ssim_dataframe = py
-        .detach(|| ssim_to_dataframe(file_path, batch_size, buffer_size, condense_segments))
+        .detach(|| ssim_to_dataframe(file_path, batch_size, buffer_size, condense_segments, serialize_segments))
         .map_err(|e| value_error(e.to_string()))?;
 
     Ok(PyDataFrame(ssim_dataframe))
