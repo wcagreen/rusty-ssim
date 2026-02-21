@@ -372,6 +372,9 @@ impl BatchProcessor for CombinedDataFrameProcessor {
         let batch_df =
             combine_all_dataframes(carrier_df, flight_df, segment_df, self.condense_segments)?;
         if batch_df.height() > 0 {
+            // TEMP WILL DEPRECATIED SOON - serialize_segments will be removed in next major release condense segments will be only option 
+            // and will NOT serialize segments into json column as it is not needed when condensing segments into list of struct column. 
+            // This is only needed for backwards compatibility.
             if self.condense_segments && self.serialize_segments {
                 let batch_df = serialize_segment_data_to_json(batch_df)?;
                 self.batches.push(batch_df);
@@ -692,6 +695,7 @@ impl BatchProcessor for ParquetWriterProcessor {
 /// * `buffer_size` - Optional buffer size for reading
 /// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller output).
 ///   If false (default), each segment is a separate row.
+/// * `serialize_segments` - If true, serializes segment data to JSON string (only applicable if condense_segments is true).
 ///
 /// # Example
 /// ```ignore
@@ -714,7 +718,7 @@ pub fn ssim_to_dataframe(
             msg: None,
         })?;
 
-    let mut processor = CombinedDataFrameProcessor::new(condense_segments.unwrap_or(false), serialize_segments.unwrap_or(true));
+    let mut processor = CombinedDataFrameProcessor::new(condense_segments.unwrap_or(false), serialize_segments.unwrap_or(false));
     reader.process(&mut processor)?;
     Ok(processor.into_result())
 }
@@ -792,6 +796,7 @@ pub fn ssim_to_csv(
 /// * `buffer_size` - Optional buffer size for reading
 /// * `condense_segments` - If true, aggregates segments into a JSON string column (smaller file).
 ///   If false (default), each segment is a separate row.
+/// * `serialize_segments` - If true, serializes segment data to JSON string (only applicable if condense_segments is true).
 ///
 /// # Example
 /// ```ignore
@@ -820,7 +825,7 @@ pub fn ssim_to_parquets(
         output_path.unwrap_or("."),
         compression,
         condense_segments.unwrap_or(false),
-        serialize_segments.unwrap_or(true),
+        serialize_segments.unwrap_or(false),
     )?;
     reader.process(&mut processor)
 }
