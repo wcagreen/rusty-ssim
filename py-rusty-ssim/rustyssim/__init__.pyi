@@ -42,7 +42,7 @@ def parse_ssim_to_dataframe(
             For larger files, consider using 131072 (128KB) for better performance.
         condense_segments (bool, optional): If True, condense multiple segments for the same flight into a single column/row in list of json format.
             Defaults to False. This can reduce number of rows and improve performance as well file size.
-            serialize_segments (bool, optional): If True, serialize segments into a JSON column per flight.
+        serialize_segments (bool, optional): If True, serialize segments into a JSON column per flight.
                 Defaults to False. This can reduce file size.
 
     Returns:
