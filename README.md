@@ -6,7 +6,7 @@ A high-performance Rust-built IATA SSIM (Standard Schedules Information Manual) 
 [![RustySSIM Crate Build](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-crates-io.yml/badge.svg)](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-to-crates-io.yml)
 [![Release CLI](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-cli-to-packages.yml/badge.svg)](https://github.com/wcagreen/rusty-ssim/actions/workflows/publish-cli-to-packages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Changelog](https://img.shields.io/badge/changelog-latest-blue)](https://github.com/wcagreen/rusty-ssim/blob/main/CHANGELOG.md)
 
 ## Features
 

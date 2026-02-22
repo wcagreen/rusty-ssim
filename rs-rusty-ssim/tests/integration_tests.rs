@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_testing::assert_dataframe_equal;
 use polars_testing::asserts::DataFrameEqualOptions;
 use rand::Rng;
-use rustyssim::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
+use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
 use std::fs;
 use tempfile::TempDir;
 
@@ -232,7 +232,7 @@ mod integration_tests {
     fn test_ssim_to_dataframe_success() {
         let (file_path, _temp_dir) = create_temp_ssim_file(10, 2, false);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrame: {:?}",
@@ -291,7 +291,7 @@ mod integration_tests {
     fn test_multi_carrier_ssim_to_dataframe_success() {
         let (file_path, _temp_dir) = create_temp_multi_ssim_file(10, 2);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM to DataFrame: {:?}",
@@ -337,7 +337,7 @@ mod integration_tests {
             output_path_str,
             Some(1000),
             Some(8192),
-            Some(false),
+            Some(false)
         );
         assert!(
             result.is_ok(),
@@ -369,6 +369,7 @@ mod integration_tests {
             Some(1000),
             Some(8192),
             Some(false),
+            Some(false)
         );
         assert!(
             result.is_ok(),
@@ -409,7 +410,7 @@ mod integration_tests {
     fn test_minimal_ssim_data() {
         let (file_path, _temp_dir) = create_temp_ssim_file(2, 1, false);
 
-        let result = ssim_to_dataframe(&file_path, Some(100), Some(8192), Some(false));
+        let result = ssim_to_dataframe(&file_path, Some(100), Some(8192), Some(false), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse minimal SSIM data: {:?}",
@@ -422,7 +423,7 @@ mod integration_tests {
 
     #[test]
     fn test_nonexistent_file() {
-        let result = ssim_to_dataframe("nonexistent_file.ssim", Some(100), Some(8192), Some(false));
+        let result = ssim_to_dataframe("nonexistent_file.ssim", Some(100), Some(8192), Some(false), Some(false));
         assert!(result.is_err(), "Should fail when file doesn't exist");
 
         if let Err(e) = result {
@@ -436,7 +437,7 @@ mod integration_tests {
 
         // Test with different batch sizes
         for batch_size in [1000, 5000, 10000, 15000] {
-            let result = ssim_to_dataframe(&file_path, Some(batch_size), Some(8192), Some(false));
+            let result = ssim_to_dataframe(&file_path, Some(batch_size), Some(8192), Some(false), Some(false));
             assert!(
                 result.is_ok(),
                 "Failed with batch size {}: {:?}",
@@ -469,6 +470,7 @@ mod integration_tests {
                 Some(100),
                 Some(8192),
                 Some(false),
+                Some(false)
             );
             assert!(
                 result.is_ok(),
@@ -511,7 +513,7 @@ mod integration_tests {
     fn test_condense_segments() {
         let (file_path, _temp_dir) = create_temp_ssim_file(10, 5, false);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(true));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(true), Some(false));
         assert!(
             result.is_ok(),
             "Failed to parse SSIM with condensed segments: {:?}",
@@ -529,7 +531,7 @@ mod integration_tests {
     fn test_multi_leg_segments_join() {
         let (file_path, _temp_dir) = create_temp_ssim_file(10, 2, true);
 
-        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false));
+        let result = ssim_to_dataframe(&file_path, Some(10000), Some(8192), Some(false), Some(false));
         let df = result.unwrap();
 
         let result_agg = df
@@ -563,7 +565,7 @@ mod performance_tests {
         let (file_path, _temp_dir) = create_temp_ssim_file(5000, 20, false);
 
         let start = Instant::now();
-        let result = ssim_to_dataframe(&file_path, Some(100000), Some(8192), Some(false));
+        let result = ssim_to_dataframe(&file_path, Some(100000), Some(8192), Some(false), Some(false));
         let duration = start.elapsed();
 
         assert!(
