@@ -75,7 +75,7 @@ cargo build -p cli-rusty-ssim --release
 ```
 
 **Requirements:**
-- Python 3.9+
+- Python 3.10+
 - Rust toolchain ([rustup.rs](https://rustup.rs))
 
 ### (Build CLI with Docker)
