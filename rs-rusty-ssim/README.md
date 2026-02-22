@@ -21,15 +21,15 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rustyssim = "0.5.2"
+rustyssim = "0.6.0"
 ```
 
 If you need additional Polars features (e.g., `csv`, `sql`), add it alongside:
 
 ```toml
 [dependencies]
-rustyssim = "0.5.2"
-polars = { version = "0.50", features = ["csv", "sql"] }
+rustyssim = "0.6.0"
+polars = { version = "0.53.0", features = ["csv", "sql"] }
 ```
 
 
