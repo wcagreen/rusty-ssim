@@ -5,6 +5,7 @@ A high-performance IATA SSIM (Standard Schedules Information Manual) parser for 
 [![Crates.io](https://img.shields.io/crates/v/rustyssim.svg)](https://crates.io/crates/rustyssim)
 [![docs.rs](https://docs.rs/rustyssim/badge.svg)](https://docs.rs/rustyssim)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Changelog](https://img.shields.io/badge/changelog-latest-blue)](https://github.com/wcagreen/rusty-ssim/blob/main/CHANGELOG.md)
 
 ## Features
 

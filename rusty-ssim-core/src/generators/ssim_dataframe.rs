@@ -134,6 +134,7 @@ fn build_segment_dataframe(segments: &[SegmentRecords<'_>]) -> PolarsResult<Data
     )
 }
 
+// Converts the provided records into three Polars DataFrames in parallel, returning a tuple of (carrier_df, flight_df, segment_df).
 pub fn convert_to_dataframes(
     carrier: Option<&CarrierRecord>,
     flights: Vec<FlightLegRecord<'_>>,

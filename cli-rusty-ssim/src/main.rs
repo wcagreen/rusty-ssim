@@ -39,9 +39,13 @@ struct SsimParquetOptions {
     #[arg(long, default_value = "8192")]
     buffer_size: usize,
 
-    /// Condense segments into a single JSON column per flight (reduces file size)
+    /// Condense segments into a list of structs in a single column per flight (reduces file size)
     #[arg(long, default_value = "false")]
     condense_segments: bool,
+
+    /// Serialize segments into a JSON column per flight (reduces file size)
+    #[arg(long, default_value = "false")]
+    serialize_segments: bool,
 }
 
 #[derive(Args)]
@@ -79,6 +83,7 @@ fn main() {
                 Some(options.batch_size),
                 Some(options.buffer_size),
                 Some(options.condense_segments),
+                Some(options.serialize_segments)
             )
             .expect("Failed to parse SSIM File to Parquet's.");
         }
