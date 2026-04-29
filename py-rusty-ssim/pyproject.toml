@@ -31,7 +31,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "polars >= 1.38.1"
+    "polars >= 1.40.1"
 ]
 
 [dependency-groups]
