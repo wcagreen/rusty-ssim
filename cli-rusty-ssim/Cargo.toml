@@ -8,8 +8,8 @@ repository.workspace = true
 description = "SSIM Parser CLI tool."
 
 [dependencies]
-clap = { version = "4.5.41", features = ["derive"] }
+clap = { version = "4.6.6", features = ["derive"] }
 rusty-ssim-core.workspace = true
 
 [dev-dependencies]
-tempfile = { version = "3.20.0" }
+tempfile.workspace = true
