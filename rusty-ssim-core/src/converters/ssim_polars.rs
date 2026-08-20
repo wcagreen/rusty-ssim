@@ -59,7 +59,7 @@ fn condense_segments_to_structs(segments: DataFrame) -> PolarsResult<DataFrame> 
                 col("data"),
             ])
             .alias("segment_data"),
-        ]).with_new_streaming(true)
+        ]).with_streaming(true)
         .collect()?;
 
     Ok(grouped)
@@ -81,7 +81,7 @@ pub(crate) fn serialize_segment_data_to_json(df: DataFrame) -> PolarsResult<Data
                 .list()
                 .join(lit(","), false)
                 .alias("segment_data"),
-        ).with_new_streaming(true)
+        ).with_streaming(true)
         .collect()?;
 
     let wrapped = df
@@ -163,7 +163,7 @@ pub(crate) fn combine_all_dataframes(
                 ],
                 JoinArgs::new(JoinType::Left),
             )
-            .with_new_streaming(true)
+            .with_streaming(true)
             .collect()
     } else {
         // Flat format - each segment is a separate row (original behavior)
@@ -192,7 +192,7 @@ pub(crate) fn combine_all_dataframes(
                 ],
                 JoinArgs::new(JoinType::Left),
             )
-            .with_new_streaming(true)
+            .with_streaming(true)
             .collect()
     }
 }
