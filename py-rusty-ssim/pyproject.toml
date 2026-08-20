@@ -31,13 +31,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "polars >= 1.40.1"
+    "polars >= 1.43.2"
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.1",
-    "pytest-benchmark>=5.1.0"
+    "pytest>=9.1.1",
+    "pytest-benchmark>=5.2.3"
 ]
 
 [project.urls]
