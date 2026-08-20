@@ -1,7 +1,7 @@
 use polars::prelude::*;
 use polars_testing::assert_dataframe_equal;
 use polars_testing::asserts::DataFrameEqualOptions;
-use rand::Rng;
+use rand::RngExt;
 use rusty_ssim_core::{ssim_to_csv, ssim_to_dataframe, ssim_to_dataframes, ssim_to_parquets};
 use std::fs;
 use tempfile::TempDir;
