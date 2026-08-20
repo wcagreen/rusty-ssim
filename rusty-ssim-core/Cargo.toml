@@ -12,7 +12,7 @@ readme = "README.md"
 polars.workspace = true
 serde.workspace = true
 rand.workspace = true
-rayon = "1.11.0"
+rayon = "1.12.0"
 
 [lib]
 name = "rusty_ssim_core"
